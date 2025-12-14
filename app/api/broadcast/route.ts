@@ -158,7 +158,25 @@ export async function POST(request: NextRequest) {
       console.log(`✅ Added push token for account ${pass.apple_account_id}`);
     }
 
-    console.log(`📦 Grouped ${Array.from(tokensByAccount.values()).flat().length} push token(s) into ${tokensByAccount.size} account(s)`);
+    const totalTokens = Array.from(tokensByAccount.values()).flat().length;
+    console.log(`📦 Grouped ${totalTokens} push token(s) into ${tokensByAccount.size} account(s)`);
+
+    // If no tokens found, return early with helpful message
+    if (totalTokens === 0) {
+      console.warn('⚠️ No push tokens found. Devices may not be registered yet.');
+      console.warn('💡 To register devices: Add a pass to Wallet on your iPhone. iOS will automatically register the device.');
+      return NextResponse.json({
+        success: true,
+        message: `Updated ${passes.length} passes, but no registered devices found to send notifications to`,
+        notifications: {
+          sent: 0,
+          failed: 0,
+          total: 0,
+        },
+        passesUpdated: passes.length,
+        warning: 'No devices registered. Add a pass to Wallet on your iPhone to register the device.',
+      }, { status: 200 });
+    }
 
     // Send push notifications for each account
     let totalSuccess = 0;
