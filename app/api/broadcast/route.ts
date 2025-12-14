@@ -111,11 +111,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update pass_data with the broadcast message
+    // Update pass_data with the notification message
+    // CRITICAL: This updates the notificationField value which triggers the notification
+    // The field with changeMessage will show this message when the pass is updated
     const updatePromises = passes.map(pass => {
       const updatedPassData = {
         ...pass.pass_data,
-        broadcastMessage: message,
+        notificationMessage: message, // This is the field that will trigger the notification
         broadcastAt: new Date().toISOString(),
       };
 
@@ -123,12 +125,13 @@ export async function POST(request: NextRequest) {
         .from('passes')
         .update({
           pass_data: updatedPassData,
-          last_updated_at: new Date().toISOString(),
+          last_updated_at: new Date().toISOString(), // Update timestamp triggers pass update detection
         })
         .eq('id', pass.id);
     });
 
     await Promise.all(updatePromises);
+    console.log(`✅ Updated ${passes.length} pass(es) with notification message: "${message}"`);
 
     // Group push tokens by apple_account_id
     const tokensByAccount = new Map<string, string[]>();
@@ -187,7 +190,9 @@ export async function POST(request: NextRequest) {
           wwdr_cert: account.wwdr_cert,
         };
 
-        const { success, failed } = await sendSilentPushToMultiple(tokens, credentials, message);
+        // Send SILENT push notifications (no message parameter - silent pushes only)
+        // The actual notification text comes from the pass field with changeMessage
+        const { success, failed } = await sendSilentPushToMultiple(tokens, credentials);
         totalSuccess += success;
         totalFailed += failed;
       } catch (error) {

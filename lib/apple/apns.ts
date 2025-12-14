@@ -2,17 +2,21 @@ import PushNotifications from 'node-pushnotifications';
 import type { AppleCredentials } from '@/lib/types';
 
 /**
- * Sends a visible push notification to a device for Wallet passes
+ * Sends a silent push notification to a device to trigger Wallet to fetch updated pass
+ * 
+ * IMPORTANT: Apple Wallet notifications work by:
+ * 1. Updating a pass field with changeMessage property
+ * 2. Sending a SILENT push (content-available: 1)
+ * 3. Device fetches updated pass
+ * 4. iOS compares old vs new pass and shows notification if field changed
  * 
  * @param pushToken The device's push token
  * @param appleCredentials Apple Developer Account credentials
- * @param message Optional message to display in the notification
  * @returns Promise<boolean> True if notification was sent successfully
  */
 export async function sendSilentPush(
   pushToken: string,
-  appleCredentials: AppleCredentials,
-  message?: string
+  appleCredentials: AppleCredentials
 ): Promise<boolean> {
   try {
     // Handle APNs key - it might be stored as PEM format or raw string
@@ -38,27 +42,16 @@ export async function sendSilentPush(
 
     const push = new PushNotifications(settings);
 
-    // Prepare the notification payload
-    // For Wallet passes, we need to send a visible notification
+    // Prepare the SILENT push notification payload
+    // This is CRITICAL: Must be silent (no alert, no sound) - just content-available
+    // The actual notification text comes from the pass field with changeMessage
     const data: any = {
       topic: appleCredentials.pass_type_id, // Pass Type ID is the topic for Wallet
       priority: 10, // High priority
-      pushType: message ? 'alert' : 'background',
-      contentAvailable: 1, // Tell Wallet to check for updates
+      pushType: 'background', // Background push (silent)
+      contentAvailable: 1, // This tells Wallet to check for updates
+      // NO alert, NO sound, NO badge - this is a silent push
     };
-
-    // If message is provided, send visible notification
-    if (message) {
-      data.alert = {
-        title: 'Wallet Update',
-        body: message,
-      };
-      data.sound = 'default';
-    } else {
-      // Silent push to trigger update check
-      data.pushType = 'background';
-      data.sound = '';
-    }
 
     // Send the notification
     const results = await push.send([pushToken], data);
@@ -67,7 +60,7 @@ export async function sendSilentPush(
     if (results && results.length > 0) {
       const result = results[0];
       if (result.success) {
-        console.log('✅ Push notification sent successfully to', pushToken.substring(0, 20) + '...');
+        console.log('✅ Silent push sent successfully to', pushToken.substring(0, 20) + '...');
         return true;
       } else {
         console.error('❌ Failed to send push notification:', result.message, result);
@@ -87,26 +80,24 @@ export async function sendSilentPush(
 }
 
 /**
- * Sends push notifications to multiple devices
+ * Sends silent push notifications to multiple devices
  * 
  * @param pushTokens Array of device push tokens
  * @param appleCredentials Apple Developer Account credentials
- * @param message Optional message to display in notifications
  * @returns Promise<{ success: number; failed: number }> Count of successful and failed notifications
  */
 export async function sendSilentPushToMultiple(
   pushTokens: string[],
-  appleCredentials: AppleCredentials,
-  message?: string
+  appleCredentials: AppleCredentials
 ): Promise<{ success: number; failed: number }> {
   if (pushTokens.length === 0) {
     return { success: 0, failed: 0 };
   }
 
-  console.log(`📤 Sending notifications to ${pushTokens.length} device(s)${message ? ` with message: "${message}"` : ''}`);
+  console.log(`📤 Sending silent push notifications to ${pushTokens.length} device(s)`);
 
   const results = await Promise.allSettled(
-    pushTokens.map(token => sendSilentPush(token, appleCredentials, message))
+    pushTokens.map(token => sendSilentPush(token, appleCredentials))
   );
 
   const success = results.filter(r => r.status === 'fulfilled' && r.value === true).length;

@@ -88,6 +88,16 @@ export async function generatePassBuffer(
       }
     }
 
+    // Add backFields with notification field (CRITICAL for push notifications)
+    // This field must have changeMessage property for notifications to work
+    passJson.backFields = [];
+    passJson.backFields.push({
+      key: 'notificationField',
+      label: 'Last Message',
+      value: passData.notificationMessage || 'Welcome! Check back for updates.',
+      changeMessage: '%@', // This is what triggers the notification when the value changes
+    });
+
     // Add website URL if provided
     if (passData.websiteUrl) {
       passJson.associatedStoreIdentifiers = [];

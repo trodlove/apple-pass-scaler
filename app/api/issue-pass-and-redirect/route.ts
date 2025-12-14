@@ -76,6 +76,7 @@ export async function GET(request: NextRequest) {
       description: 'Wallet Pass',
       backgroundColor: 'rgb(255, 255, 255)',
       foregroundColor: 'rgb(0, 0, 0)',
+      notificationMessage: 'Welcome! Check back for updates.', // Default notification message
     };
 
     // Generate the pass buffer
