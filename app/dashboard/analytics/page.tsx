@@ -1,7 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatCurrency } from '@/lib/utils';
-import { CreditCard, Users, DollarSign, Bell } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -10,9 +8,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { CreditCard, Users, Bell } from 'lucide-react';
 
-export default async function DashboardPage() {
-  // Fetch accurate stats from Supabase
+export default async function AnalyticsPage() {
+  // Fetch stats
   const [passesResult, revenueResult, notificationsResult] = await Promise.all([
     supabaseAdmin.from('passes').select('id', { count: 'exact', head: true }),
     supabaseAdmin.from('passes').select('revenue'),
@@ -21,23 +20,21 @@ export default async function DashboardPage() {
 
   const totalPasses = passesResult.count || 0;
   
-  // Count distinct device_ids from registrations (accurate active devices count)
+  // Count distinct device_ids from registrations
   const { data: distinctDevices } = await supabaseAdmin
     .from('registrations')
     .select('device_id');
   
   const uniqueDeviceIds = new Set(distinctDevices?.map(r => r.device_id) || []);
-  const accurateActiveDevices = uniqueDeviceIds.size;
+  const totalDevices = uniqueDeviceIds.size;
 
-  const totalRevenue = revenueResult.data?.reduce((sum, pass) => sum + (Number(pass.revenue) || 0), 0) || 0;
   const notificationsSent = notificationsResult.count || 0;
 
-  // Fetch passes with device and notification counts for analytics table
+  // Fetch passes with device and notification counts
   const { data: allPasses } = await supabaseAdmin
     .from('passes')
     .select('id, pass_data, created_at')
-    .order('created_at', { ascending: false })
-    .limit(10);
+    .order('created_at', { ascending: false });
 
   // Get device and notification counts per pass
   const passesWithStats = await Promise.all(
@@ -47,7 +44,6 @@ export default async function DashboardPage() {
         .select('device_id', { count: 'exact', head: true })
         .eq('pass_id', pass.id);
 
-      // For notifications, count sequence enrollments for this pass
       const { count: notificationCount } = await supabaseAdmin
         .from('sequence_enrollments')
         .select('id', { count: 'exact', head: true })
@@ -69,7 +65,7 @@ export default async function DashboardPage() {
         <h1 className="text-3xl font-bold mb-2">Analytics</h1>
         <p className="text-gray-600">View device registrations and notification stats for your passes.</p>
       </div>
-      
+
       {/* Stats Cards */}
       <div className="grid gap-6 md:grid-cols-3 mb-8">
         <Card>
@@ -79,7 +75,6 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{totalPasses.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-1">All passes issued</p>
           </CardContent>
         </Card>
 
@@ -89,8 +84,7 @@ export default async function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{accurateActiveDevices.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-1">Devices with passes installed</p>
+            <div className="text-3xl font-bold">{totalDevices.toLocaleString()}</div>
           </CardContent>
         </Card>
 
@@ -101,7 +95,6 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{notificationsSent.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total notifications delivered</p>
           </CardContent>
         </Card>
       </div>

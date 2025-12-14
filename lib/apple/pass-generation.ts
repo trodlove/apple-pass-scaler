@@ -33,22 +33,69 @@ export async function generatePassBuffer(
       foregroundColor: passData.foregroundColor || 'rgb(0, 0, 0)',
     };
 
+    // Add labelColor if provided
+    if (passData.labelColor) {
+      passJson.labelColor = passData.labelColor;
+    }
+
     // Add logoText if provided
     if (passData.logoText) {
       passJson.logoText = passData.logoText;
     }
 
     // Set pass type based on style
+    let passTypeSection: any = {};
     if (passStyle === 'coupon') {
-      passJson.coupon = {};
+      passJson.coupon = passTypeSection;
     } else if (passStyle === 'loyalty') {
-      passJson.storeCard = {};
+      passJson.storeCard = passTypeSection;
     } else if (passStyle === 'boardingPass') {
-      passJson.boardingPass = {};
+      passJson.boardingPass = passTypeSection;
     } else if (passStyle === 'eventTicket') {
-      passJson.eventTicket = {};
+      passJson.eventTicket = passTypeSection;
     } else {
-      passJson.generic = {};
+      passJson.generic = passTypeSection;
+    }
+
+    // Add header fields if provided
+    if (passData.headerLabel || passData.headerValue) {
+      passTypeSection.headerFields = [];
+      if (passData.headerLabel && passData.headerValue) {
+        passTypeSection.headerFields.push({
+          key: 'header',
+          label: passData.headerLabel,
+          value: passData.headerValue,
+        });
+      }
+    }
+
+    // Add secondary fields if provided
+    if (passData.secondaryLeftLabel || passData.secondaryRightLabel) {
+      passTypeSection.secondaryFields = [];
+      if (passData.secondaryLeftLabel && passData.secondaryLeftValue) {
+        passTypeSection.secondaryFields.push({
+          key: 'secondaryLeft',
+          label: passData.secondaryLeftLabel,
+          value: passData.secondaryLeftValue,
+        });
+      }
+      if (passData.secondaryRightLabel && passData.secondaryRightValue) {
+        passTypeSection.secondaryFields.push({
+          key: 'secondaryRight',
+          label: passData.secondaryRightLabel,
+          value: passData.secondaryRightValue,
+        });
+      }
+    }
+
+    // Add website URL if provided
+    if (passData.websiteUrl) {
+      passJson.associatedStoreIdentifiers = [];
+      // Note: In production, you'd need to register the website domain with Apple
+      // For now, we'll add it as a webServiceURL alternative
+      passJson.userInfo = {
+        websiteUrl: passData.websiteUrl,
+      };
     }
 
     // Add webServiceURL and authenticationToken if provided
@@ -62,19 +109,65 @@ export async function generatePassBuffer(
       passJson.relevantDate = new Date(passData.relevantDate).toISOString();
     }
 
+    // Helper function to convert base64 data URL to Buffer
+    function base64ToBuffer(base64: string): Buffer {
+      // Handle data URLs (data:image/png;base64,...)
+      const base64Data = base64.includes(',') ? base64.split(',')[1] : base64;
+      return Buffer.from(base64Data, 'base64');
+    }
+
     // Create a minimal icon (1x1 transparent PNG) - required by Apple
-    // This is a minimal valid PNG
     const minimalIcon = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
       'base64'
     );
 
+    // Regenerate pass.json with updated fields (after adding headerFields, secondaryFields, etc.)
+    // This ensures the JSON structure is complete before creating buffers
+    const finalPassJson = JSON.parse(JSON.stringify(passJson));
+
     // Create buffers object for passkit-generator
     const buffers: Record<string, Buffer> = {
-      'pass.json': Buffer.from(JSON.stringify(passJson, null, 2)),
-      'icon.png': minimalIcon,
-      'icon@2x.png': minimalIcon, // 2x version
+      'pass.json': Buffer.from(JSON.stringify(finalPassJson, null, 2)),
     };
+
+    // Add images if provided
+    if (passData.logo) {
+      try {
+        const logoBuffer = base64ToBuffer(passData.logo);
+        buffers['logo.png'] = logoBuffer;
+        buffers['logo@2x.png'] = logoBuffer; // Use same image for 2x
+      } catch (error) {
+        console.warn('Error processing logo image:', error);
+      }
+    }
+
+    if (passData.icon) {
+      try {
+        const iconBuffer = base64ToBuffer(passData.icon);
+        buffers['icon.png'] = iconBuffer;
+        buffers['icon@2x.png'] = iconBuffer;
+      } catch (error) {
+        console.warn('Error processing icon image:', error);
+        // Fallback to minimal icon
+        buffers['icon.png'] = minimalIcon;
+        buffers['icon@2x.png'] = minimalIcon;
+      }
+    } else {
+      // Use minimal icon if no custom icon provided
+      buffers['icon.png'] = minimalIcon;
+      buffers['icon@2x.png'] = minimalIcon;
+    }
+
+    if (passData.stripImage) {
+      try {
+        const stripBuffer = base64ToBuffer(passData.stripImage);
+        buffers['strip.png'] = stripBuffer;
+        buffers['strip@2x.png'] = stripBuffer;
+      } catch (error) {
+        console.warn('Error processing strip image:', error);
+      }
+    }
 
     // Create certificates object (omit signerKeyPassphrase if empty)
     const certificates: any = {
@@ -100,7 +193,11 @@ export async function generatePassBuffer(
     );
 
     // Populate fields from template and pass data
-    if (templateData.fields) {
+    // Note: We're now handling fields directly in pass.json structure above
+    // This section is kept for backward compatibility with templates
+    // Only use template fields if no custom fields were provided
+    const hasCustomFields = passData.headerLabel || passData.secondaryLeftLabel || passData.secondaryRightLabel;
+    if (templateData.fields && !hasCustomFields) {
       Object.entries(templateData.fields).forEach(([key, fieldConfig]: [string, any]) => {
         const value = passData[key] !== undefined ? passData[key] : fieldConfig.defaultValue;
         

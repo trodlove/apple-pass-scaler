@@ -111,28 +111,37 @@ export async function POST(request: NextRequest) {
 
     for (const accountId of accountIds) {
       const tokens = tokensByAccount.get(accountId) || [];
-      if (tokens.length === 0) continue;
+      if (tokens.length === 0) {
+        console.log(`No push tokens found for account ${accountId}, skipping notifications`);
+        continue;
+      }
 
       // Get account credentials
       const account = await getAppleAccountById(accountId);
       if (!account) {
         console.warn(`Account ${accountId} not found, skipping push notifications`);
+        totalFailed += tokens.length; // Count all tokens as failed
         continue;
       }
 
-      const credentials = {
-        team_id: account.team_id,
-        pass_type_id: account.pass_type_id,
-        apns_key_id: account.apns_key_id,
-        apns_auth_key: account.apns_auth_key,
-        pass_signer_cert: account.pass_signer_cert,
-        pass_signer_key: account.pass_signer_key,
-        wwdr_cert: account.wwdr_cert,
-      };
+      try {
+        const credentials = {
+          team_id: account.team_id,
+          pass_type_id: account.pass_type_id,
+          apns_key_id: account.apns_key_id,
+          apns_auth_key: account.apns_auth_key,
+          pass_signer_cert: account.pass_signer_cert,
+          pass_signer_key: account.pass_signer_key,
+          wwdr_cert: account.wwdr_cert,
+        };
 
-      const { success, failed } = await sendSilentPushToMultiple(tokens, credentials);
-      totalSuccess += success;
-      totalFailed += failed;
+        const { success, failed } = await sendSilentPushToMultiple(tokens, credentials);
+        totalSuccess += success;
+        totalFailed += failed;
+      } catch (error) {
+        console.error(`Error sending push notifications for account ${accountId}:`, error);
+        totalFailed += tokens.length; // Count all tokens as failed
+      }
     }
 
     return NextResponse.json({
@@ -141,7 +150,9 @@ export async function POST(request: NextRequest) {
       notifications: {
         sent: totalSuccess,
         failed: totalFailed,
+        total: totalSuccess + totalFailed,
       },
+      passesUpdated: passes.length,
     }, { status: 200 });
   } catch (error) {
     console.error('Error in broadcast:', error);
