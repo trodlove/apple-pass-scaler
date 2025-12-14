@@ -2,12 +2,17 @@
  * Apple Wallet Pass Integration - Direct Download Method (JavaScript Module)
  * Uses fetch() + Blob + createObjectURL to trigger Wallet sheet directly
  * Similar to LockScreen AI approach - bypasses Safari popup
+ * 
+ * Auto-configured with Vercel URL - ready to use!
  */
+
+// Auto-configured Vercel URL
+const DEFAULT_PASS_BASE_URL = 'https://apple-pass-scaler.vercel.app';
 
 /**
  * Adds pass to wallet and continues to next step
  * @param {Object} options - Configuration options
- * @param {string} options.passBaseUrl - Your Vercel deployment URL (e.g., 'https://apple-pass-scaler.vercel.app')
+ * @param {string} [options.passBaseUrl] - Your Vercel deployment URL (auto-configured, optional override)
  * @param {string} options.nextStepUrl - URL to redirect to after pass is added
  * @param {string} [options.clickId] - Optional click ID (auto-generated if not provided)
  * @param {Object} [options.trackingParams] - Optional tracking parameters (utm_source, utm_campaign, etc.)
@@ -17,7 +22,7 @@
  */
 async function addToWalletAndContinue(options) {
   const {
-    passBaseUrl,
+    passBaseUrl = DEFAULT_PASS_BASE_URL, // Auto-configured default
     nextStepUrl,
     clickId,
     trackingParams = {},
@@ -25,8 +30,8 @@ async function addToWalletAndContinue(options) {
     onError
   } = options;
 
-  if (!passBaseUrl || !nextStepUrl) {
-    const error = new Error('passBaseUrl and nextStepUrl are required');
+  if (!nextStepUrl) {
+    const error = new Error('nextStepUrl is required');
     if (onError) onError(error);
     throw error;
   }

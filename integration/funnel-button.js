@@ -5,24 +5,27 @@
 
 /**
  * Opens the wallet pass generation page
+ * Auto-configured with Vercel URL - ready to use!
  * @param {Object} options - Configuration options
- * @param {string} options.passBaseUrl - Your Vercel deployment URL (e.g., 'https://apple-pass-scaler.vercel.app')
+ * @param {string} [options.passBaseUrl] - Your Vercel deployment URL (auto-configured, optional override)
  * @param {string} options.nextStepUrl - URL to redirect to after pass is added
  * @param {string} [options.clickId] - Optional click ID (auto-generated if not provided)
  * @param {Object} [options.trackingParams] - Optional tracking parameters (utm_source, utm_campaign, etc.)
  * @param {boolean} [options.openInNewTab=false] - Whether to open in new tab (default: same tab)
  */
+const DEFAULT_PASS_BASE_URL = 'https://apple-pass-scaler.vercel.app';
+
 function openWalletPass(options) {
   const {
-    passBaseUrl,
+    passBaseUrl = DEFAULT_PASS_BASE_URL, // Auto-configured default
     nextStepUrl,
     clickId,
     trackingParams = {},
     openInNewTab = false
   } = options;
 
-  if (!passBaseUrl || !nextStepUrl) {
-    console.error('openWalletPass: passBaseUrl and nextStepUrl are required');
+  if (!nextStepUrl) {
+    console.error('openWalletPass: nextStepUrl is required');
     return;
   }
 
