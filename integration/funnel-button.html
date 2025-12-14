@@ -1,0 +1,82 @@
+<!-- 
+  Apple Wallet Pass Integration - HTML Button
+  Copy this code into your quiz funnel where you want the "Add to Wallet" button
+-->
+
+<!-- Replace YOUR_VERCEL_URL with your actual Vercel deployment URL -->
+<!-- Example: https://apple-pass-scaler.vercel.app -->
+
+<button 
+  id="wallet-pass-btn" 
+  class="wallet-pass-button"
+  onclick="openWalletPass()"
+>
+  Add to Apple Wallet
+</button>
+
+<script>
+function openWalletPass() {
+  // Replace with your Vercel deployment URL
+  const PASS_BASE_URL = 'https://YOUR_VERCEL_URL.vercel.app';
+  
+  // Get the next step URL (replace with your actual next quiz step)
+  const nextStepUrl = 'https://your-quiz.com/next-step';
+  
+  // Get tracking parameters from current URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const clickId = urlParams.get('click_id') || generateClickId();
+  const utmSource = urlParams.get('utm_source') || '';
+  const utmCampaign = urlParams.get('utm_campaign') || '';
+  const utmMedium = urlParams.get('utm_medium') || '';
+  
+  // Build the pass generation URL
+  const passUrl = new URL(`${PASS_BASE_URL}/api/issue-pass-and-redirect`);
+  passUrl.searchParams.set('click_id', clickId);
+  passUrl.searchParams.set('redirect_url', encodeURIComponent(nextStepUrl));
+  
+  // Preserve UTM parameters
+  if (utmSource) passUrl.searchParams.set('utm_source', utmSource);
+  if (utmCampaign) passUrl.searchParams.set('utm_campaign', utmCampaign);
+  if (utmMedium) passUrl.searchParams.set('utm_medium', utmMedium);
+  
+  // Copy all other query parameters
+  urlParams.forEach((value, key) => {
+    if (!['click_id', 'redirect_url'].includes(key)) {
+      passUrl.searchParams.set(key, value);
+    }
+  });
+  
+  // Open pass generation page (same tab - will redirect after pass is added)
+  window.location.href = passUrl.toString();
+}
+
+function generateClickId() {
+  // Generate a unique click ID if not provided
+  return 'click_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+</script>
+
+<style>
+.wallet-pass-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 16px 32px;
+  font-size: 18px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.wallet-pass-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.wallet-pass-button:active {
+  transform: translateY(0);
+}
+</style>
+

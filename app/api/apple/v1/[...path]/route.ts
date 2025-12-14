@@ -1,0 +1,372 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { generatePassBuffer } from '@/lib/apple/pass-generation';
+import { getAppleAccountById } from '@/lib/apple/credentials';
+
+/**
+ * Apple Web Service API
+ * Handles all 5 required endpoints for Wallet pass updates
+ * 
+ * Endpoints:
+ * - POST /v1/devices/{deviceID}/registrations/{passTypeID}/{serialNumber}
+ * - DELETE /v1/devices/{deviceID}/registrations/{passTypeID}/{serialNumber}
+ * - GET /v1/passes/{passTypeID}/{serialNumber}
+ * - GET /v1/devices/{deviceID}/registrations/{passTypeID}?passesUpdatedSince={tag}
+ * - POST /v1/log
+ */
+export async function POST(request: NextRequest) {
+  return handleRequest(request, 'POST');
+}
+
+export async function GET(request: NextRequest) {
+  return handleRequest(request, 'GET');
+}
+
+export async function DELETE(request: NextRequest) {
+  return handleRequest(request, 'DELETE');
+}
+
+async function handleRequest(request: NextRequest, method: string) {
+  try {
+    // Parse the path
+    const pathSegments = request.nextUrl.pathname.split('/').filter(Boolean);
+    // Expected: ['api', 'apple', 'v1', ...rest]
+    const applePath = pathSegments.slice(3).join('/');
+
+    // Authenticate the request
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('ApplePass ')) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    const authenticationToken = authHeader.substring('ApplePass '.length);
+
+    // Validate authentication token
+    const { data: pass, error: authError } = await supabaseAdmin
+      .from('passes')
+      .select('*')
+      .eq('authentication_token', authenticationToken)
+      .single();
+
+    if (authError || !pass) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    // Route to appropriate handler based on path and method
+    if (method === 'POST' && applePath.startsWith('devices/') && applePath.includes('/registrations/')) {
+      return handleRegisterDevice(request, applePath, pass);
+    } else if (method === 'DELETE' && applePath.startsWith('devices/') && applePath.includes('/registrations/')) {
+      return handleUnregisterDevice(request, applePath, pass);
+    } else if (method === 'GET' && applePath.startsWith('passes/')) {
+      return handleGetPass(request, applePath, pass);
+    } else if (method === 'GET' && applePath.startsWith('devices/') && applePath.includes('/registrations/')) {
+      return handleGetUpdatedPasses(request, applePath, pass);
+    } else if (method === 'POST' && applePath === 'log') {
+      return handleLog(request, applePath, pass);
+    }
+
+    return new NextResponse('Not Found', { status: 404 });
+  } catch (error) {
+    console.error('Error in Apple Web Service:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
+}
+
+/**
+ * POST /v1/devices/{deviceID}/registrations/{passTypeID}/{serialNumber}
+ * Register a device for a pass
+ */
+async function handleRegisterDevice(
+  request: NextRequest,
+  path: string,
+  pass: any
+) {
+  try {
+    // Parse path: devices/{deviceID}/registrations/{passTypeID}/{serialNumber}
+    const pathParts = path.split('/');
+    const deviceID = pathParts[1];
+    const serialNumber = pathParts[4];
+
+    // Verify serial number matches
+    if (pass.serial_number !== serialNumber) {
+      return new NextResponse('Forbidden', { status: 403 });
+    }
+
+    // Read push token from request body
+    const body = await request.text();
+    const pushToken = body.trim();
+
+    if (!pushToken) {
+      return new NextResponse('Bad Request', { status: 400 });
+    }
+
+    // Find or create device
+    let { data: device, error: deviceError } = await supabaseAdmin
+      .from('devices')
+      .select('*')
+      .eq('device_library_identifier', deviceID)
+      .single();
+
+    if (deviceError && deviceError.code === 'PGRST116') {
+      // Device doesn't exist, create it
+      const { data: newDevice, error: createError } = await supabaseAdmin
+        .from('devices')
+        .insert({
+          device_library_identifier: deviceID,
+          push_token: pushToken,
+        })
+        .select()
+        .single();
+
+      if (createError || !newDevice) {
+        console.error('Error creating device:', createError);
+        return new NextResponse('Internal Server Error', { status: 500 });
+      }
+      device = newDevice;
+    } else if (deviceError) {
+      console.error('Error fetching device:', deviceError);
+      return new NextResponse('Internal Server Error', { status: 500 });
+    } else {
+      // Update push token if device exists
+      await supabaseAdmin
+        .from('devices')
+        .update({ push_token: pushToken })
+        .eq('id', device.id);
+    }
+
+    // Create registration if it doesn't exist
+    const { error: regError } = await supabaseAdmin
+      .from('registrations')
+      .upsert({
+        pass_id: pass.id,
+        device_id: device.id,
+      }, {
+        onConflict: 'pass_id,device_id',
+      });
+
+    if (regError) {
+      console.error('Error creating registration:', regError);
+      return new NextResponse('Internal Server Error', { status: 500 });
+    }
+
+    return new NextResponse('', { status: 200 });
+  } catch (error) {
+    console.error('Error in handleRegisterDevice:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
+}
+
+/**
+ * DELETE /v1/devices/{deviceID}/registrations/{passTypeID}/{serialNumber}
+ * Unregister a device from a pass
+ */
+async function handleUnregisterDevice(
+  request: NextRequest,
+  path: string,
+  pass: any
+) {
+  try {
+    // Parse path: devices/{deviceID}/registrations/{passTypeID}/{serialNumber}
+    const pathParts = path.split('/');
+    const deviceID = pathParts[1];
+    const serialNumber = pathParts[4];
+
+    // Verify serial number matches
+    if (pass.serial_number !== serialNumber) {
+      return new NextResponse('Forbidden', { status: 403 });
+    }
+
+    // Find device
+    const { data: device, error: deviceError } = await supabaseAdmin
+      .from('devices')
+      .select('*')
+      .eq('device_library_identifier', deviceID)
+      .single();
+
+    if (deviceError || !device) {
+      return new NextResponse('Not Found', { status: 404 });
+    }
+
+    // Delete registration
+    const { error: deleteError } = await supabaseAdmin
+      .from('registrations')
+      .delete()
+      .eq('pass_id', pass.id)
+      .eq('device_id', device.id);
+
+    if (deleteError) {
+      console.error('Error deleting registration:', deleteError);
+      return new NextResponse('Internal Server Error', { status: 500 });
+    }
+
+    return new NextResponse('', { status: 200 });
+  } catch (error) {
+    console.error('Error in handleUnregisterDevice:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
+}
+
+/**
+ * GET /v1/passes/{passTypeID}/{serialNumber}
+ * Get the latest version of a pass
+ */
+async function handleGetPass(
+  request: NextRequest,
+  path: string,
+  pass: any
+) {
+  try {
+    // Parse path: passes/{passTypeID}/{serialNumber}
+    const pathParts = path.split('/');
+    const serialNumber = pathParts[2];
+
+    // Verify serial number matches
+    if (pass.serial_number !== serialNumber) {
+      return new NextResponse('Forbidden', { status: 403 });
+    }
+
+    // Get template and account
+    const [template, account] = await Promise.all([
+      pass.template_id
+        ? supabaseAdmin.from('pass_templates').select('*').eq('id', pass.template_id).single()
+        : Promise.resolve({ data: null, error: null }),
+      pass.apple_account_id
+        ? getAppleAccountById(pass.apple_account_id)
+        : Promise.resolve(null),
+    ]);
+
+    if (!account) {
+      return new NextResponse('Account not found', { status: 500 });
+    }
+
+    const credentials = {
+      team_id: account.team_id,
+      pass_type_id: account.pass_type_id,
+      apns_key_id: account.apns_key_id,
+      apns_auth_key: account.apns_auth_key,
+      pass_signer_cert: account.pass_signer_cert,
+      pass_signer_key: account.pass_signer_key,
+      wwdr_cert: account.wwdr_cert,
+    };
+
+    const templateData = (template as any).data
+      ? {
+          pass_style: (template as any).data.pass_style,
+          fields: (template as any).data.fields,
+        }
+      : {
+          pass_style: 'generic',
+          fields: {},
+        };
+
+    // Update webServiceURL in pass data
+    const passData = {
+      ...pass.pass_data,
+      serialNumber: pass.serial_number,
+      authenticationToken: pass.authentication_token,
+      webServiceURL: `${request.nextUrl.origin}/api/apple/v1`,
+    };
+
+    // Generate pass buffer
+    const passBuffer = await generatePassBuffer(passData, templateData, credentials);
+
+    // Return the pass file
+    return new NextResponse(passBuffer as any, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/vnd.apple.pkpass',
+        'Content-Disposition': `attachment; filename="pass.pkpass"`,
+      },
+    });
+  } catch (error) {
+    console.error('Error in handleGetPass:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
+}
+
+/**
+ * GET /v1/devices/{deviceID}/registrations/{passTypeID}?passesUpdatedSince={tag}
+ * Get list of passes that have been updated since a given timestamp
+ */
+async function handleGetUpdatedPasses(
+  request: NextRequest,
+  path: string,
+  pass: any
+) {
+  try {
+    // Parse path: devices/{deviceID}/registrations/{passTypeID}
+    const pathParts = path.split('/');
+    const deviceID = pathParts[1];
+
+    // Get passesUpdatedSince query parameter
+    const passesUpdatedSince = request.nextUrl.searchParams.get('passesUpdatedSince');
+
+    // Find device
+    const { data: device, error: deviceError } = await supabaseAdmin
+      .from('devices')
+      .select('*')
+      .eq('device_library_identifier', deviceID)
+      .single();
+
+    if (deviceError || !device) {
+      return new NextResponse('Not Found', { status: 404 });
+    }
+
+    // Get all passes registered to this device that have been updated since the timestamp
+    let query = supabaseAdmin
+      .from('registrations')
+      .select('pass_id, passes!inner(serial_number, last_updated_at)')
+      .eq('device_id', device.id);
+
+    if (passesUpdatedSince) {
+      // Filter by last_updated_at
+      query = query.gt('passes.last_updated_at', passesUpdatedSince);
+    }
+
+    const { data: registrations, error: regError } = await query;
+
+    if (regError) {
+      console.error('Error fetching registrations:', regError);
+      return new NextResponse('Internal Server Error', { status: 500 });
+    }
+
+    if (!registrations || registrations.length === 0) {
+      return new NextResponse('', { status: 204 }); // No Content
+    }
+
+    // Extract serial numbers
+    const serialNumbers = registrations
+      .map((reg: any) => reg.passes?.serial_number)
+      .filter((sn: string) => sn);
+
+    // Return serial numbers as JSON
+    return NextResponse.json(serialNumbers, { status: 200 });
+  } catch (error) {
+    console.error('Error in handleGetUpdatedPasses:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
+}
+
+/**
+ * POST /v1/log
+ * Log errors from devices
+ */
+async function handleLog(
+  request: NextRequest,
+  path: string,
+  pass: any
+) {
+  try {
+    const body = await request.text();
+    console.log(`[Device Log] Pass ${pass.serial_number}:`, body);
+
+    // You could store logs in a database table if needed
+    // For now, we just log to console
+
+    return new NextResponse('', { status: 200 });
+  } catch (error) {
+    console.error('Error in handleLog:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
+}
+

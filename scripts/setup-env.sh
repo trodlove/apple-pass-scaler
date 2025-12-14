@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Setup script to create .env.local file
+# Run this script to set up your environment variables
+
+cat > .env.local << 'EOF'
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://vvgvhlswsiqpnpwlcxud.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_HiwhxAUb3inMaBx_r8TZ6w_EvV2Cagz
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2Z3ZobHN3c2lxcG5wd2xjeHVkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTY4MDEwNCwiZXhwIjoyMDgxMjU2MTA0fQ.sL3SMqZCtgYSu3Eqq7KHwvjPqzcki2A6k60TXARddqo
+
+# Vercel Cron Secret
+VERCEL_CRON_SECRET=pC7gF9xW2rQ81vNzb4KLMt6uYH0qSdVp
+
+# DigitalOcean Spaces Configuration
+DIGITALOCEAN_SPACES_ENDPOINT=https://my-wallet-passes.sfo3.digitaloceanspaces.com
+DIGITALOCEAN_SPACES_KEY=DO008MPWKAQLPXQEHCCJ
+DIGITALOCEAN_SPACES_SECRET=va8Z1494r4UcCu5YBc39j2boGoa6h13J+Ta+V8Obgcs
+
+# Application Secrets
+ENCRYPTION_SECRET=pC7gF9xW2rQ81vNzb4KLMt6uYH0qSdVp
+EOF
+
+echo "✅ .env.local file created successfully!"
+echo "⚠️  Remember to add your Apple Developer Account via the dashboard at /dashboard/accounts"
+
