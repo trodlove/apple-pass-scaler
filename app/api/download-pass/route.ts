@@ -55,12 +55,18 @@ export async function GET(request: NextRequest) {
     );
 
     // Return the pass file
+    // Use inline disposition on iOS to avoid download prompt
+    const userAgent = request.headers.get('user-agent') || '';
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+    const disposition = isIOS ? 'inline' : 'attachment';
+    
     return new NextResponse(passBuffer as any, {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.apple.pkpass',
-        'Content-Disposition': `attachment; filename="pass.pkpass"`,
+        'Content-Disposition': `${disposition}; filename="pass.pkpass"`,
         'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Content-Type-Options': 'nosniff',
       },
     });
   } catch (error) {

@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
     // Store pass in a way that can be retrieved (we'll use a query param approach)
     // For now, let's create a download endpoint and redirect properly
     
-    // Return HTML that triggers pass download and then redirects
+    // Return HTML that automatically shows pass and waits for user to return
     const passDownloadUrl = `${request.nextUrl.origin}/api/download-pass?serial=${serialNumber}&token=${authenticationToken}`;
     
     const html = `
@@ -181,46 +181,109 @@ export async function GET(request: NextRequest) {
   <div class="container">
     <h2>Adding Pass to Wallet...</h2>
     <div class="spinner"></div>
-    <p>Please wait while we prepare your pass.</p>
-    <p style="font-size: 0.875rem; margin-top: 1rem; opacity: 0.7;">You will be redirected automatically.</p>
+    <p>Your pass is opening in Wallet.</p>
+    <p style="font-size: 0.875rem; margin-top: 1rem; opacity: 0.7;">You will be redirected when you return.</p>
   </div>
   <script>
     (function() {
       const passUrl = ${JSON.stringify(passDownloadUrl)};
       const redirectUrl = ${JSON.stringify(redirectUrl)};
-      
-      // Method 1: Try direct navigation to pass file (works best on iOS)
-      // This will trigger Wallet to open automatically
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       
-      const redirectDelay = ${delay};
+      let passOpened = false;
+      let redirectTriggered = false;
+      let pageWasHidden = false;
+      let windowBlurred = false;
       
+      function redirect() {
+        if (redirectTriggered) return;
+        redirectTriggered = true;
+        window.location.href = redirectUrl;
+      }
+      
+      // Automatically open pass - use iframe to minimize popup
       if (isIOS) {
-        // On iOS, directly navigate to the pass file
-        window.location.href = passUrl;
+        // On iOS, use an iframe to load the pass
+        // This approach minimizes the popup and automatically opens Wallet
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'absolute';
+        iframe.style.left = '-9999px';
+        iframe.style.width = '1px';
+        iframe.style.height = '1px';
+        iframe.style.border = 'none';
+        iframe.src = passUrl;
+        document.body.appendChild(iframe);
         
-        // Redirect after a delay (pass will open in Wallet, this redirects the browser)
+        // Also create a link as backup
+        const link = document.createElement('a');
+        link.href = passUrl;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        
+        // Trigger link click after iframe loads (backup method)
+        iframe.onload = function() {
+          setTimeout(() => {
+            if (!passOpened) {
+              link.click();
+              passOpened = true;
+            }
+          }, 100);
+        };
+        
+        // Fallback: trigger link if iframe doesn't work
         setTimeout(() => {
-          window.location.href = ${JSON.stringify(redirectUrl)};
-        }, redirectDelay);
+          if (!passOpened) {
+            link.click();
+            passOpened = true;
+          }
+        }, 200);
       } else {
-        // On other platforms, use download link
+        // Desktop: download the pass
         const link = document.createElement('a');
         link.href = passUrl;
         link.download = 'pass.pkpass';
         link.style.display = 'none';
         document.body.appendChild(link);
-        
-        // Trigger download immediately
         setTimeout(() => {
           link.click();
+          passOpened = true;
+          // On desktop, redirect after download
+          setTimeout(redirect, 2000);
         }, 100);
-        
-        // Redirect after delay (slightly shorter for desktop)
-        setTimeout(() => {
-          window.location.href = ${JSON.stringify(redirectUrl)};
-        }, Math.max(redirectDelay - 500, 2000));
       }
+      
+      // Detect when user returns from Wallet using Page Visibility API
+      document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+          // Page is hidden - user likely opened Wallet
+          pageWasHidden = true;
+        } else if (pageWasHidden && passOpened) {
+          // Page is visible again and pass was opened - user returned from Wallet
+          // Wait a moment then redirect
+          setTimeout(redirect, 500);
+        }
+      });
+      
+      // Fallback: If page visibility doesn't work, use focus/blur events
+      window.addEventListener('blur', function() {
+        if (passOpened) {
+          windowBlurred = true;
+        }
+      });
+      
+      window.addEventListener('focus', function() {
+        if (windowBlurred && passOpened && !redirectTriggered) {
+          setTimeout(redirect, 500);
+        }
+      });
+      
+      // Ultimate fallback: Redirect after 30 seconds if user hasn't returned
+      // This handles edge cases where detection doesn't work
+      setTimeout(function() {
+        if (!redirectTriggered) {
+          redirect();
+        }
+      }, 30000);
     })();
   </script>
 </body>

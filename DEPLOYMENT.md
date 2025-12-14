@@ -68,8 +68,10 @@ git push -u origin main
 
 Cron jobs are automatically configured via `vercel.json`. Vercel will:
 - Automatically detect the cron configuration
-- Run `/api/cron/sequences` every hour
+- Run `/api/cron/sequences` once per day at 9 AM UTC (due to Hobby plan limitations)
 - Use `VERCEL_CRON_SECRET` for authentication
+
+**Note:** Vercel Hobby plan only allows daily cron jobs. The sequence automation runs once per day. If you need hourly execution, upgrade to Vercel Pro plan and change the schedule in `vercel.json` to `0 * * * *`.
 
 **No additional setup needed!** ✅
 
