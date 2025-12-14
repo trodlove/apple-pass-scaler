@@ -10,6 +10,7 @@ import {
   List,
   Settings,
   User,
+  Users,
   FileText,
 } from 'lucide-react';
 
@@ -23,6 +24,7 @@ export default function DashboardLayout({
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/dashboard/passes', label: 'Library', icon: CreditCard },
+    { href: '/dashboard/devices', label: 'Devices', icon: Users },
     { href: '/dashboard/campaigns', label: 'Campaigns', icon: Megaphone },
     { href: '/dashboard/sequences', label: 'Notification', icon: List },
     { href: '/dashboard/analytics', label: 'Analytics', icon: FileText },
