@@ -139,7 +139,9 @@ export async function POST(request: NextRequest) {
 
         console.log(`🔑 Using account: ${account.pass_type_id}`);
 
-        const { success, failed } = await sendSilentPushToMultiple(tokens, credentials, message);
+        // Send silent push notifications (no message parameter - silent pushes only)
+        // The actual notification text comes from the pass field with changeMessage
+        const { success, failed } = await sendSilentPushToMultiple(tokens, credentials);
         totalSuccess += success;
         totalFailed += failed;
 
