@@ -55,17 +55,60 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all registered devices for these passes
-    const { data: registrations, error: registrationsError } = await supabaseAdmin
-      .from('registrations')
-      .select('pass_id, device_id, devices!inner(push_token)')
-      .in('pass_id', passes.map(p => p.id));
+    // Try multiple query approaches to find registrations
+    let registrations: any[] = [];
+    let registrationsError: any = null;
 
-    if (registrationsError) {
-      console.error('Error fetching registrations:', registrationsError);
-      return NextResponse.json(
-        { error: 'Failed to fetch device registrations' },
-        { status: 500 }
-      );
+    // First, get all devices
+    const { data: allDevices, error: devicesError } = await supabaseAdmin
+      .from('devices')
+      .select('id, push_token, device_library_identifier');
+
+    console.log(`📱 Found ${allDevices?.length || 0} device(s) in database`);
+
+    if (!devicesError && allDevices && allDevices.length > 0) {
+      // Get registrations for these devices
+      const { data: regs, error: regError } = await supabaseAdmin
+        .from('registrations')
+        .select('device_id, pass_id, passes(apple_account_id)')
+        .in('device_id', allDevices.map(d => d.id))
+        .in('pass_id', passes.map(p => p.id));
+
+      if (!regError && regs) {
+        // Combine device and registration data
+        registrations = regs.map(reg => ({
+          device_id: reg.device_id,
+          pass_id: reg.pass_id,
+          devices: allDevices.find(d => d.id === reg.device_id),
+          passes: reg.passes,
+        }));
+        console.log(`📱 Found ${registrations.length} registration(s) with devices`);
+      } else {
+        registrationsError = regError;
+        console.error('Error fetching registrations:', regError);
+      }
+    } else {
+      console.warn('⚠️ No devices found in database. Make sure you have added a pass to your Wallet.');
+    }
+
+    // If still no registrations, try the original query as fallback
+    if (registrations.length === 0) {
+      const { data: regs, error: regError } = await supabaseAdmin
+        .from('registrations')
+        .select('pass_id, device_id, device:devices(push_token), pass:passes(apple_account_id)')
+        .in('pass_id', passes.map(p => p.id));
+
+      if (!regError && regs) {
+        registrations = regs.map((r: any) => ({
+          device_id: r.device_id,
+          pass_id: r.pass_id,
+          devices: r.device,
+          passes: r.pass,
+        }));
+        console.log(`📱 Found ${registrations.length} registration(s) with fallback query`);
+      } else if (regError) {
+        console.error('Error with fallback registration query:', regError);
+      }
     }
 
     // Update pass_data with the broadcast message
@@ -90,20 +133,29 @@ export async function POST(request: NextRequest) {
     // Group push tokens by apple_account_id
     const tokensByAccount = new Map<string, string[]>();
 
-    if (registrations) {
-      for (const reg of registrations) {
-        const pass = passes.find(p => p.id === reg.pass_id);
-        if (!pass || !pass.apple_account_id) continue;
+    console.log(`📦 Processing ${registrations.length} registration(s)...`);
 
-        const device = reg.devices as any;
-        if (!device?.push_token) continue;
-
-        if (!tokensByAccount.has(pass.apple_account_id)) {
-          tokensByAccount.set(pass.apple_account_id, []);
-        }
-        tokensByAccount.get(pass.apple_account_id)!.push(device.push_token);
+    for (const reg of registrations) {
+      const pass = passes.find(p => p.id === reg.pass_id);
+      if (!pass || !pass.apple_account_id) {
+        console.warn(`⚠️ Skipping registration - pass ${reg.pass_id} not found or no apple_account_id`);
+        continue;
       }
+
+      const device = reg.devices as any;
+      if (!device?.push_token) {
+        console.warn(`⚠️ Skipping registration - device ${reg.device_id} has no push_token`);
+        continue;
+      }
+
+      if (!tokensByAccount.has(pass.apple_account_id)) {
+        tokensByAccount.set(pass.apple_account_id, []);
+      }
+      tokensByAccount.get(pass.apple_account_id)!.push(device.push_token);
+      console.log(`✅ Added push token for account ${pass.apple_account_id}`);
     }
+
+    console.log(`📦 Grouped ${Array.from(tokensByAccount.values()).flat().length} push token(s) into ${tokensByAccount.size} account(s)`);
 
     // Send push notifications for each account
     let totalSuccess = 0;
