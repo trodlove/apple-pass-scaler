@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
           wwdr_cert: account.wwdr_cert,
         };
 
-        const { success, failed } = await sendSilentPushToMultiple(tokens, credentials);
+        const { success, failed } = await sendSilentPushToMultiple(tokens, credentials, message);
         totalSuccess += success;
         totalFailed += failed;
       } catch (error) {
