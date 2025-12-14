@@ -183,9 +183,9 @@ export async function GET(request: NextRequest) {
     <p>Your pass is opening in Wallet.</p>
     <p style="font-size: 0.875rem; margin-top: 1rem; opacity: 0.7;">You will be redirected when you return.</p>
   </div>
+  <iframe id="passFrame" src="${passDownloadUrl}"></iframe>
   <script>
     (function() {
-      const passUrl = ${JSON.stringify(passDownloadUrl)};
       const redirectUrl = ${JSON.stringify(redirectUrl)};
       let redirectTriggered = false;
       let pageWasHidden = false;
@@ -197,62 +197,22 @@ export async function GET(request: NextRequest) {
         window.location.href = redirectUrl;
       }
       
-      // Use blob approach similar to lockscreen.ai
-      // This fetches the pass as a blob and creates a download link
-      // IMPORTANT: Safari popup is UNAVOIDABLE - it's a security requirement
-      // Even lockscreen.ai gets the popup - there's no way to bypass it
-      async function downloadPass() {
-        try {
-          const response = await fetch(passUrl);
-          if (!response.ok) {
-            console.error('Failed to fetch pass:', response.status);
-            // Fallback to direct link
-            const link = document.createElement('a');
-            link.href = passUrl;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            passOpened = true;
-            return;
-          }
-          
-          const blob = await response.blob();
-          const blobUrl = window.URL.createObjectURL(blob);
-          const filename = 'pass.pkpass';
-          
-          // Create download link
-          const link = document.createElement('a');
-          link.href = blobUrl;
-          link.download = filename;
-          link.style.display = 'none';
-          document.body.appendChild(link);
-          
-          // Trigger download
-          link.click();
-          
-          // Clean up
-          setTimeout(() => {
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(blobUrl);
-          }, 100);
-          
-          passOpened = true;
-        } catch (error) {
-          console.error('Error downloading pass:', error);
-          // Fallback to direct link
-          const link = document.createElement('a');
-          link.href = passUrl;
-          link.style.display = 'none';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          passOpened = true;
-        }
-      }
+      // Load pass in iframe - this will trigger Wallet
+      const iframe = document.getElementById('passFrame');
+      iframe.onload = function() {
+        passOpened = true;
+      };
       
-      // Start download immediately
-      downloadPass();
+      // Also try direct link click as backup
+      const link = document.createElement('a');
+      link.href = ${JSON.stringify(passDownloadUrl)};
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      
+      setTimeout(() => {
+        link.click();
+        passOpened = true;
+      }, 100);
       
       // Detect when user returns from Wallet using Page Visibility API
       document.addEventListener('visibilitychange', function() {

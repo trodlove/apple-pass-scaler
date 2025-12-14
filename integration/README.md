@@ -1,15 +1,29 @@
-# Apple Wallet Pass Integration Guide - Frictionless Flow
+# Apple Wallet Pass Integration Guide
 
-This guide shows you how to integrate Apple Wallet pass generation into your quiz funnel with **minimal friction**.
+This guide shows you how to integrate Apple Wallet pass generation into your quiz funnel.
 
-## ✨ Frictionless Flow
+## 🚀 Two Integration Methods
 
-The integration now uses a **direct pass serving** approach:
-1. **User clicks "Add to Wallet"** in your quiz (this is the consent)
-2. **Pass opens directly** - No intermediate HTML page
-3. **Auto-redirects** when user returns from Wallet
+### Method 1: Direct Download (Recommended - Like LockScreen AI)
+**File:** `funnel-button-direct.html` or `funnel-button-direct.js`
 
-**Result:** Fastest possible flow with just 2 taps (consent + Safari allow)
+Uses `fetch() + Blob + createObjectURL` to trigger Wallet sheet directly:
+- ✅ **Bypasses Safari popup** - Shows Wallet "Add Pass" sheet directly
+- ✅ **No intermediate page** - Happens on your quiz page
+- ✅ **1 second delay then redirect** - Automatic continuation
+- ✅ **Preserves all URL parameters** - Full tracking support
+
+**Flow:** Click button → Wallet sheet appears → Add pass → Auto-redirect after 1 second
+
+### Method 2: Page-Based (Alternative)
+**File:** `funnel-button.html` or `funnel-button.js`
+
+Uses intermediate page with iframe:
+- Shows loading page
+- Detects when user returns from Wallet
+- Redirects automatically
+
+**Flow:** Click button → Loading page → Wallet opens → Return → Auto-redirect
 
 ## Quick Start
 
@@ -21,7 +35,44 @@ The integration now uses a **direct pass serving** approach:
 
 ## Integration Options
 
-### Option 1: HTML Button (Easiest)
+### Option 1: Direct Download Method (Recommended)
+
+**File:** `funnel-button-direct.html`
+
+This is the **recommended method** - it uses `fetch() + Blob + createObjectURL` to trigger the Wallet sheet directly, similar to LockScreen AI. This bypasses the Safari popup.
+
+Copy the entire contents of `funnel-button-direct.html` into your quiz funnel HTML where you want the button to appear.
+
+**What to customize:**
+- Replace `YOUR_VERCEL_URL` with your Vercel deployment URL
+- Replace `https://your-quiz.com/next-step` with your actual next quiz step URL
+
+**Example:**
+```html
+<!-- Before -->
+const PASS_BASE_URL = 'https://YOUR_VERCEL_URL.vercel.app';
+
+<!-- After -->
+const PASS_BASE_URL = 'https://apple-pass-scaler.vercel.app';
+```
+
+**How it works:**
+1. User clicks "Add to Wallet" button
+2. JavaScript fetches the pass file using `fetch()`
+3. Converts response to Blob
+4. Creates object URL and triggers download
+5. iOS intercepts and shows Wallet "Add Pass" sheet (no Safari popup!)
+6. After 1 second, automatically redirects to next step
+
+**Key Technical Details:**
+- Backend serves file with MIME type: `application/vnd.apple.pkpass`
+- Frontend uses `fetch()` → `Blob` → `createObjectURL()` → programmatic click
+- This method bypasses Safari's security popup
+- All URL parameters are preserved through the flow
+
+### Option 2: Page-Based Method (Alternative)
+
+**File:** `funnel-button.html`
 
 Copy the entire contents of `funnel-button.html` into your quiz funnel HTML where you want the button to appear.
 

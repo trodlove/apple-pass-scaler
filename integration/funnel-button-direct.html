@@ -1,0 +1,147 @@
+<!-- 
+  Apple Wallet Pass Integration - Direct Download Method
+  This uses fetch() + Blob + createObjectURL to trigger Wallet sheet directly
+  Similar to LockScreen AI approach - bypasses Safari popup
+-->
+
+<!-- Replace YOUR_VERCEL_URL with your actual Vercel deployment URL -->
+<!-- Example: https://apple-pass-scaler.vercel.app -->
+
+<button 
+  id="wallet-pass-btn" 
+  class="wallet-pass-button"
+  onclick="addToWalletAndContinue()"
+>
+  Add to Apple Wallet
+</button>
+
+<script>
+async function addToWalletAndContinue() {
+  // Replace with your Vercel deployment URL
+  const PASS_BASE_URL = 'https://YOUR_VERCEL_URL.vercel.app';
+  
+  // Get the next step URL (replace with your actual next quiz step)
+  const nextStepUrl = 'https://your-quiz.com/next-step';
+  
+  // Get all URL parameters from current page
+  const urlParams = new URLSearchParams(window.location.search);
+  const clickId = urlParams.get('click_id') || generateClickId();
+  
+  // Build the pass generation URL with all parameters
+  const passUrl = new URL(`${PASS_BASE_URL}/api/generate-pass`);
+  passUrl.searchParams.set('click_id', clickId);
+  
+  // Copy all query parameters to pass generation request
+  urlParams.forEach((value, key) => {
+    if (key !== 'click_id') {
+      passUrl.searchParams.set(key, value);
+    }
+  });
+  
+  // Disable button and show loading state
+  const button = document.getElementById('wallet-pass-btn');
+  const originalText = button ? button.textContent : 'Add to Apple Wallet';
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Opening Wallet...';
+  }
+  
+  try {
+    // Fetch the pass file
+    const response = await fetch(passUrl.toString());
+    
+    if (!response.ok) {
+      throw new Error(`Failed to generate pass: ${response.status}`);
+    }
+    
+    // Convert response to Blob
+    const blob = await response.blob();
+    
+    // Verify the MIME type (should be application/vnd.apple.pkpass)
+    if (blob.type !== 'application/vnd.apple.pkpass') {
+      console.warn('Unexpected MIME type:', blob.type);
+    }
+    
+    // Create object URL from Blob
+    const objectUrl = window.URL.createObjectURL(blob);
+    
+    // Create temporary anchor element
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = 'pass.pkpass';
+    link.style.display = 'none';
+    
+    // Append to body and click programmatically
+    document.body.appendChild(link);
+    link.click();
+    
+    // Clean up: remove link and revoke object URL
+    document.body.removeChild(link);
+    setTimeout(() => {
+      window.URL.revokeObjectURL(objectUrl);
+    }, 100);
+    
+    // Build redirect URL with all parameters
+    const redirectUrl = new URL(nextStepUrl);
+    
+    // Preserve all original query parameters in redirect
+    urlParams.forEach((value, key) => {
+      redirectUrl.searchParams.set(key, value);
+    });
+    
+    // Wait 1 second then redirect to next step
+    setTimeout(() => {
+      window.location.href = redirectUrl.toString();
+    }, 1000);
+    
+  } catch (error) {
+    console.error('Error adding pass to wallet:', error);
+    
+    // Restore button state on error
+    if (button) {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+    
+    // Show error message to user
+    alert('Failed to add pass to wallet. Please try again.');
+  }
+}
+
+function generateClickId() {
+  // Generate a unique click ID if not provided
+  return 'click_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+</script>
+
+<style>
+.wallet-pass-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 16px 32px;
+  font-size: 18px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 300px;
+}
+
+.wallet-pass-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.wallet-pass-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.wallet-pass-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+</style>
+
