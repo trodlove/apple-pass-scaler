@@ -30,8 +30,9 @@ function openWalletPass(options) {
   const urlParams = new URLSearchParams(window.location.search);
   const finalClickId = clickId || urlParams.get('click_id') || generateClickId();
   
-  // Build the pass generation URL
-  const passUrl = new URL(`${passBaseUrl}/api/issue-pass-and-redirect`);
+  // Build the pass generation URL using the page endpoint
+  // This loads the pass in an iframe so we can detect when user returns
+  const passUrl = new URL(`${passBaseUrl}/api/issue-pass-page`);
   passUrl.searchParams.set('click_id', finalClickId);
   passUrl.searchParams.set('redirect_url', encodeURIComponent(nextStepUrl));
   

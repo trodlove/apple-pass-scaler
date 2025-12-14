@@ -1,6 +1,15 @@
-# Apple Wallet Pass Integration Guide
+# Apple Wallet Pass Integration Guide - Frictionless Flow
 
-This guide shows you how to integrate Apple Wallet pass generation into your quiz funnel.
+This guide shows you how to integrate Apple Wallet pass generation into your quiz funnel with **minimal friction**.
+
+## ✨ Frictionless Flow
+
+The integration now uses a **direct pass serving** approach:
+1. **User clicks "Add to Wallet"** in your quiz (this is the consent)
+2. **Pass opens directly** - No intermediate HTML page
+3. **Auto-redirects** when user returns from Wallet
+
+**Result:** Fastest possible flow with just 2 taps (consent + Safari allow)
 
 ## Quick Start
 
@@ -78,34 +87,47 @@ function QuizStep() {
 }
 ```
 
-## How It Works
+## How It Works (Frictionless Flow)
 
-1. **User clicks button** → Opens pass generation URL
-2. **Pass is generated** → Saved to database with tracking info
-3. **Pass opens in Wallet** → On iOS, automatically opens in Wallet app
-4. **Auto-redirect** → After 3 seconds, redirects to next quiz step
+1. **User clicks "Add to Wallet" button** → This is the consent step in your quiz
+2. **Navigates to pass page** → Minimal page loads with pass in background
+3. **Pass opens automatically** → Loads in iframe, triggers Wallet
+4. **Safari shows security popup** → User taps "Allow" (this is the only popup - Safari requirement)
+5. **Pass opens in Wallet** → Automatically opens in Wallet app
+6. **User adds pass or closes Wallet** → Returns to browser
+7. **Auto-redirect detected** → Page visibility API detects return
+8. **Redirects to next quiz step** → Seamless continuation
+
+**Key Benefits:**
+- ✅ User consents in your quiz UI (clear intent)
+- ✅ Minimal loading page (just shows "Adding Pass...")
+- ✅ Pass opens automatically (no extra clicks)
+- ✅ Only one Safari popup (security requirement - can't be avoided)
+- ✅ Automatic redirect on return (seamless)
+- ✅ Works in Safari and in-app browsers
 
 ## URL Parameters
 
-The pass generation endpoint accepts these parameters:
+The **pass page endpoint** (`/api/issue-pass-page`) accepts these parameters:
 
 ### Required
 - `redirect_url` - URL to redirect to after pass is added (URL-encoded)
 
 ### Optional
 - `click_id` - Unique identifier for tracking (auto-generated if not provided)
-- `delay` - Redirect delay in milliseconds (default: 3000ms)
 - `utm_source`, `utm_campaign`, `utm_medium`, etc. - UTM tracking parameters
 - Any other parameters - All are preserved and passed through
 
 ### Example URL
 ```
-https://apple-pass-scaler.vercel.app/api/issue-pass-and-redirect?
+https://apple-pass-scaler.vercel.app/api/issue-pass-page?
   click_id=quiz_12345&
   redirect_url=https%3A%2F%2Fyour-quiz.com%2Fnext-step&
   utm_source=quiz&
   utm_campaign=funnel-1
 ```
+
+**Note:** This endpoint serves a minimal HTML page that loads the pass in an iframe. The main page stays visible and detects when the user returns from Wallet, then redirects automatically.
 
 ## Customization
 

@@ -1,6 +1,9 @@
 <!-- 
-  Apple Wallet Pass Integration - HTML Button
+  Apple Wallet Pass Integration - Frictionless HTML Button
   Copy this code into your quiz funnel where you want the "Add to Wallet" button
+  
+  This version uses the direct pass endpoint for minimal friction.
+  User clicks button (consent) → Pass opens directly → Auto-redirects when user returns
 -->
 
 <!-- Replace YOUR_VERCEL_URL with your actual Vercel deployment URL -->
@@ -29,8 +32,9 @@ function openWalletPass() {
   const utmCampaign = urlParams.get('utm_campaign') || '';
   const utmMedium = urlParams.get('utm_medium') || '';
   
-  // Build the pass generation URL
-  const passUrl = new URL(`${PASS_BASE_URL}/api/issue-pass-and-redirect`);
+  // Build the pass generation URL using the page endpoint
+  // This loads the pass in an iframe so we can detect when user returns
+  const passUrl = new URL(`${PASS_BASE_URL}/api/issue-pass-page`);
   passUrl.searchParams.set('click_id', clickId);
   passUrl.searchParams.set('redirect_url', encodeURIComponent(nextStepUrl));
   
@@ -46,8 +50,28 @@ function openWalletPass() {
     }
   });
   
-  // Open pass generation page (same tab - will redirect after pass is added)
-  window.location.href = passUrl.toString();
+  // Show brief loading state (optional - can be removed for even faster flow)
+  const button = document.getElementById('wallet-pass-btn');
+  if (button) {
+    const originalText = button.textContent;
+    button.textContent = 'Opening Wallet...';
+    button.disabled = true;
+    
+    // Navigate directly to pass file (no intermediate page)
+    // This will open Wallet automatically
+    window.location.href = passUrl.toString();
+    
+    // Fallback: restore button if navigation fails
+    setTimeout(() => {
+      if (button) {
+        button.textContent = originalText;
+        button.disabled = false;
+      }
+    }, 2000);
+  } else {
+    // If button not found, just navigate
+    window.location.href = passUrl.toString();
+  }
 }
 
 function generateClickId() {
