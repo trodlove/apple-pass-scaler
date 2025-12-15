@@ -143,22 +143,10 @@ export async function POST(request: NextRequest) {
     };
 
     // Send push notifications
-    let success = 0;
-    let failed = 0;
-    let errorDetails: any = null;
-    
-    try {
-      const result = await sendSilentPushToMultiple(pushTokens, credentials);
-      success = result.success;
-      failed = result.failed;
-    } catch (error) {
-      failed = pushTokens.length;
-      errorDetails = {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-      };
-      console.error('[Test Specific Pass] Error sending notifications:', error);
-    }
+    const result = await sendSilentPushToMultiple(pushTokens, credentials);
+    const success = result.success;
+    const failed = result.failed;
+    const errorDetails = result.errors;
 
     // Get detailed error info from console logs if available
     // The actual error will be in Vercel logs, but we can return what we know
