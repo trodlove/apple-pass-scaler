@@ -281,7 +281,7 @@
     // Use the Vercel production URL
     const PASS_BASE_URL = 'https://apple-pass-scaler.vercel.app';
 
-    async function addToWallet() {
+    function addToWallet() {
       const button = document.getElementById('wallet-button');
       const buttonText = document.getElementById('button-text');
       const originalText = buttonText.textContent;
@@ -297,45 +297,13 @@
         passUrl.searchParams.set('utm_source', 'test');
         passUrl.searchParams.set('utm_campaign', 'wallet_test');
         
-        // Fetch the pass file using the direct download method
-        const response = await fetch(passUrl.toString());
+        // Direct navigation approach - iOS recognizes .pkpass files automatically
+        // This avoids CORS issues and works better on iOS Safari
+        // iOS will automatically show the "Add to Wallet" sheet when it detects the .pkpass MIME type
+        window.location.href = passUrl.toString();
         
-        if (!response.ok) {
-          throw new Error(`Failed to generate pass: ${response.status}`);
-        }
-        
-        // Convert response to Blob
-        const blob = await response.blob();
-        
-        // Verify the MIME type (should be application/vnd.apple.pkpass)
-        if (blob.type !== 'application/vnd.apple.pkpass') {
-          console.warn('Unexpected MIME type:', blob.type);
-        }
-        
-        // Create object URL from Blob
-        const objectUrl = window.URL.createObjectURL(blob);
-        
-        // Create temporary anchor element
-        const link = document.createElement('a');
-        link.href = objectUrl;
-        link.download = 'pass.pkpass'; // This is ignored by iOS for pkpass files
-        link.style.display = 'none';
-        
-        // Append to body and click programmatically
-        document.body.appendChild(link);
-        link.click(); // This triggers the Wallet sheet on iOS directly - no popup!
-        
-        // Clean up: remove link and revoke object URL
-        document.body.removeChild(link);
-        setTimeout(() => {
-          window.URL.revokeObjectURL(objectUrl);
-        }, 100);
-        
-        // Keep button in loading state briefly, then restore
-        setTimeout(() => {
-          button.disabled = false;
-          buttonText.textContent = originalText;
-        }, 2000);
+        // Note: The page will navigate away, so we don't need to restore the button
+        // If the user comes back, the button will be in its original state
         
       } catch (error) {
         console.error('Error adding pass to wallet:', error);

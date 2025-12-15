@@ -97,14 +97,16 @@ export async function GET(request: NextRequest) {
 
     // Return the pass file with correct MIME type
     // This is critical: "application/vnd.apple.pkpass" tells iOS to show Wallet sheet
+    // Using "inline" instead of "attachment" works better for direct navigation on iOS
     return new NextResponse(passBuffer as any, {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.apple.pkpass',
-        'Content-Disposition': 'attachment; filename="pass.pkpass"',
+        'Content-Disposition': 'inline; filename="pass.pkpass"',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0',
+        'Access-Control-Allow-Origin': '*', // Allow CORS for direct navigation
       },
     });
   } catch (error) {
