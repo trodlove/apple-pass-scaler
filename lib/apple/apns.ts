@@ -25,7 +25,9 @@ export async function sendSilentPush(
     // Try both string and Buffer - library should accept either
     // For token auth, the key can be a PEM string or Buffer
     const keyValue = authKey.includes('BEGIN') ? authKey : Buffer.from(authKey, 'utf-8');
-    const settings = {
+    // Configure ONLY APNs - library should auto-detect based on token format
+    // APNs tokens are 64-char hex strings, FCM tokens are longer
+    const settings: any = {
       apn: {
         token: {
           key: keyValue,
@@ -37,13 +39,17 @@ export async function sendSilentPush(
       },
     };
     // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:28',message:'APNs settings configured',data:{keyId:settings.apn.token.keyId,teamId:settings.apn.token.teamId,production:settings.apn.production,hasGcm:!!settings.gcm,hasFcm:!!settings.fcm,settingsKeys:Object.keys(settings)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:28',message:'APNs settings configured',data:{keyId:settings.apn.token.keyId,teamId:settings.apn.token.teamId,production:settings.apn.production},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
     // #endregion
 
     const push = new PushNotifications(settings);
 
-    // Prepare the notification payload
+    // Prepare the notification payload for APNs
     // Silent push with content-available: 1 tells Wallet to check for updates
+    // APNs requires the payload to be wrapped in an 'aps' object
     const data = {
       topic: appleCredentials.pass_type_id, // Pass Type ID is the topic for Wallet
       priority: 10, // High priority
@@ -51,15 +57,25 @@ export async function sendSilentPush(
       contentAvailable: 1, // Silent push notification
       sound: '', // No sound for silent push
       badge: undefined, // No badge update
+      // Ensure this is recognized as APNs payload
+      aps: {
+        'content-available': 1,
+      },
     };
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:40',message:'Notification payload prepared',data:{topic:data.topic,priority:data.priority,pushType:data.pushType,contentAvailable:data.contentAvailable},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
     // #endregion
 
     // Send the notification
+    // Validate token format - APNs tokens are 64 hex characters
+    const isApnsToken = /^[0-9a-f]{64}$/i.test(pushToken);
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:42',message:'Calling push.send',data:{pushTokenCount:1},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:42',message:'Calling push.send',data:{pushTokenCount:1,pushTokenLength:pushToken.length,isApnsTokenFormat:isApnsToken,pushTokenPreview:pushToken.substring(0,20)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
+    if (!isApnsToken) {
+      console.error(`[APNs] Invalid token format. Expected 64 hex characters, got ${pushToken.length} characters: ${pushToken.substring(0, 20)}...`);
+      return false;
+    }
     const results = await push.send([pushToken], data);
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:44',message:'push.send completed',data:{resultsLength:results?.length||0,result0:results?.[0]?JSON.stringify(results[0]):'null',result0Success:results?.[0]?.success,result0Message:results?.[0]?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
