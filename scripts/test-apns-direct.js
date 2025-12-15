@@ -94,18 +94,29 @@ async function testAPNs() {
     console.log('   First 50 chars:', authKey.substring(0, 50));
 
     // Configure APNs
-    // Per the guide: key should be decoded from base64, but we have PEM
-    // Try the guide's exact format: Buffer.from(key, "base64").toString("ascii")
-    // But since we have PEM, try it as string directly
-    console.log('\n🔧 Configuring APNs provider...');
+    // Per the guide: key should be base64 encoded, then decoded: Buffer.from(key, "base64").toString("ascii")
+    // We have PEM, so let's try the guide's approach: encode to base64, then decode back
+    console.log('\n🔧 Testing guide\'s approach: base64 encode then decode...');
+    
+    // Step 1: Encode PEM to base64 (as if it was stored as base64)
+    const base64Encoded = Buffer.from(authKey, 'utf-8').toString('base64');
+    console.log('   Base64 encoded length:', base64Encoded.length);
+    
+    // Step 2: Decode from base64 to ascii (per guide: Buffer.from(key, "base64").toString("ascii"))
+    const decodedKey = Buffer.from(base64Encoded, 'base64').toString('ascii');
+    console.log('   Decoded back to PEM, matches original:', decodedKey === authKey);
+    
+    // Use the decoded key (should be same as original PEM)
     let options = {
       token: {
-        key: authKey, // PEM string
+        key: decodedKey, // Use decoded key (per guide's approach)
         keyId: account.apns_key_id,
         teamId: account.team_id,
       },
       production: true, // MUST be true for Wallet
     };
+    
+    console.log('\n📱 Configuring APNs provider with decoded key...');
 
     console.log('\n📱 Configuring APNs provider...');
     console.log('   Production:', options.production);

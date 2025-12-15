@@ -25,40 +25,45 @@ export async function sendSilentPush(
 
     // Prepare APNs auth key
     // Per the guide: key should be stored as base64, then decoded: Buffer.from(key, "base64").toString("ascii")
-    // But we store as PEM, so we need to handle both cases
+    // We store as PEM, but the guide's approach is: base64 -> decode -> PEM string
+    // So if we have PEM, we can use it directly. If we have base64, decode it.
     let authKey = appleCredentials.apns_auth_key.trim();
     
-    // If key has BEGIN/END markers, it's PEM format - use directly
-    // If key doesn't have markers, it might be base64 - decode it
+    // If key has BEGIN/END markers, it's PEM format - use directly as string
+    // If key doesn't have markers, it might be base64 - decode it to PEM
     if (!authKey.includes('BEGIN') && !authKey.includes('END')) {
       try {
-        // Try to decode as base64 (per guide's recommendation)
+        // Per guide: Buffer.from(key, "base64").toString("ascii")
         authKey = Buffer.from(authKey, 'base64').toString('ascii');
         console.log('[APNs] Decoded key from base64 to PEM');
       } catch (e) {
-        // Not base64, use as-is (might be raw PEM without markers)
-        console.log('[APNs] Key is not base64, using as-is');
+        // Not base64, use as-is
+        console.log('[APNs] Key is not base64, using as PEM string');
       }
     }
     
-    // Final key should be PEM format (with BEGIN/END or without)
-    // The apn library accepts both string and Buffer
+    // Final key should be PEM format string
+    // Per guide's code: the key is passed as string (PEM) to the apn library
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:20',message:'Auth key prepared',data:{keyLength:authKey.length,keyStartsWith:authKey.substring(0,50),hasBegin:authKey.includes('BEGIN'),hasEnd:authKey.includes('END')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
 
     // Configure APNs provider - CRITICAL: Wallet passes MUST use production: true
     // Per the guide: "All Apple Wallet passes, regardless of how they are installed, use the PRODUCTION APNs environment."
-    // Per the guide's code example: key should be passed as string (PEM format)
-    // The guide shows: Buffer.from(envVar, "base64").toString("ascii") - which gives us PEM string
-    const options = {
+    // The apn library accepts key as string (PEM) or Buffer
+    // Try as string first (most common), but library also accepts Buffer
+    const options: any = {
       token: {
-        key: authKey, // Use PEM string directly (as shown in guide)
+        key: authKey, // PEM string
         keyId: appleCredentials.apns_key_id,
         teamId: appleCredentials.team_id,
       },
       production: true, // MUST be true for Wallet passes
     };
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:28',message:'APNs options configured',data:{keyId:options.token.keyId,teamId:options.token.teamId,production:options.production,keyType:typeof options.token.key,keyLength:options.token.key.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:28',message:'APNs options configured',data:{keyId:options.token.keyId,teamId:options.token.teamId,production:options.production},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
     // #endregion
