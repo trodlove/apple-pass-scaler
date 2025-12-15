@@ -30,20 +30,26 @@ export async function sendSilentPush(
     // #endregion
 
     // Configure APNs provider using dedicated 'apn' library
-    // Wallet passes ALWAYS use Production APNs
-    const options = {
+    // APNs keys work for both sandbox and production
+    // Try production first (required for Wallet passes), fallback to sandbox if needed
+    const keyValue = authKey.includes('BEGIN') ? authKey : Buffer.from(authKey, 'utf-8');
+    
+    // Try production first (Wallet passes require production)
+    let options = {
       token: {
-        key: authKey.includes('BEGIN') ? authKey : Buffer.from(authKey, 'utf-8'),
+        key: keyValue,
         keyId: appleCredentials.apns_key_id,
         teamId: appleCredentials.team_id,
       },
-      production: true, // Wallet passes always use production
+      production: true,
     };
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:28',message:'APNs options configured',data:{keyId:options.token.keyId,teamId:options.token.teamId,production:options.production},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
     // #endregion
 
-    const provider = new apn.Provider(options);
+    // Try production first, then sandbox if production fails
+    let provider = new apn.Provider(options);
+    let useSandbox = false;
 
     // Create notification for Wallet pass update
     // Silent push with content-available tells Wallet to check for updates
@@ -52,14 +58,26 @@ export async function sendSilentPush(
     notification.contentAvailable = true; // Silent push notification
     notification.priority = 10; // High priority
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:40',message:'Notification prepared',data:{topic:notification.topic,contentAvailable:notification.contentAvailable,priority:notification.priority},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:40',message:'Notification prepared',data:{topic:notification.topic,contentAvailable:notification.contentAvailable,priority:notification.priority,production:options.production},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
     // #endregion
 
     // Send the notification
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:42',message:'Calling provider.send',data:{pushTokenLength:pushToken.length,pushTokenPreview:pushToken.substring(0,20)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:42',message:'Calling provider.send (production)',data:{pushTokenLength:pushToken.length,pushTokenPreview:pushToken.substring(0,20)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
-    const result = await provider.send(notification, pushToken);
+    let result = await provider.send(notification, pushToken);
+    
+    // If production fails with BadEnvironmentKeyInToken, try sandbox
+    if (result.failed.length > 0 && result.failed[0].response?.reason === 'BadEnvironmentKeyInToken') {
+      console.log('[APNs] Production failed with BadEnvironmentKeyInToken, trying sandbox...');
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:50',message:'Retrying with sandbox',data:{reason:result.failed[0].response?.reason},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      options.production = false;
+      provider = new apn.Provider(options);
+      useSandbox = true;
+      result = await provider.send(notification, pushToken);
+    }
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:44',message:'provider.send completed',data:{sent:result.sent.length,failed:result.failed.length,failedDetails:JSON.stringify(result.failed)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
