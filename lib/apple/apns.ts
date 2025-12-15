@@ -23,81 +23,70 @@ export async function sendSilentPush(
       return false;
     }
 
-    // Prepare APNs auth key
+    // Prepare APNs auth key - use as string (PEM format)
+    // The guide suggests Base64, but we store as PEM text, so use directly
     const authKey = appleCredentials.apns_auth_key.trim();
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:20',message:'Auth key prepared',data:{keyLength:authKey.length,keyStartsWith:authKey.substring(0,50),hasBegin:authKey.includes('BEGIN'),hasEnd:authKey.includes('END')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
 
-    // Configure APNs provider using dedicated 'apn' library
-    // APNs keys work for both sandbox and production
-    // For testing, try sandbox first (physical devices often need sandbox during development)
-    // For production, Wallet passes require production APNs
-    const keyValue = authKey.includes('BEGIN') ? authKey : Buffer.from(authKey, 'utf-8');
-    
-    // Try sandbox first for testing, then production
-    let options = {
+    // Configure APNs provider - CRITICAL: Wallet passes MUST use production: true
+    // Per the guide: "All Apple Wallet passes, regardless of how they are installed, use the PRODUCTION APNs environment."
+    const options = {
       token: {
-        key: keyValue,
+        key: authKey, // Use PEM string directly
         keyId: appleCredentials.apns_key_id,
         teamId: appleCredentials.team_id,
       },
-      production: false, // Start with sandbox for testing
+      production: true, // MUST be true for Wallet passes
     };
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:28',message:'APNs options configured',data:{keyId:options.token.keyId,teamId:options.token.teamId,production:options.production},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
     // #endregion
 
-    // Try production first, then sandbox if production fails
-    let provider = new apn.Provider(options);
-    let useSandbox = false;
+    const provider = new apn.Provider(options);
 
     // Create notification for Wallet pass update
-    // Silent push with content-available tells Wallet to check for updates
+    // Per the guide: payload must be empty, topic must be Pass Type ID
     const notification = new apn.Notification();
-    notification.topic = appleCredentials.pass_type_id; // Pass Type ID is the topic for Wallet
-    notification.contentAvailable = true; // Silent push notification
-    notification.priority = 10; // High priority
+    notification.payload = {}; // CRITICAL: Empty payload for Wallet updates
+    notification.topic = appleCredentials.pass_type_id; // CRITICAL: Must be Pass Type ID, not Bundle ID
+    notification.priority = 5; // Per guide: should be 5, not 10
+    notification.contentAvailable = true; // Silent push notification (background update)
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:40',message:'Notification prepared',data:{topic:notification.topic,contentAvailable:notification.contentAvailable,priority:notification.priority,production:options.production},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:40',message:'Notification prepared',data:{topic:notification.topic,payload:JSON.stringify(notification.payload),priority:notification.priority,contentAvailable:notification.contentAvailable},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
     // #endregion
 
     // Send the notification
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:42',message:'Calling provider.send (production)',data:{pushTokenLength:pushToken.length,pushTokenPreview:pushToken.substring(0,20)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:42',message:'Calling provider.send',data:{pushTokenLength:pushToken.length,pushTokenPreview:pushToken.substring(0,20)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
-    let result = await provider.send(notification, pushToken);
-    
-    // If sandbox fails with BadEnvironmentKeyInToken, try production
-    if (result.failed.length > 0 && result.failed[0].response?.reason === 'BadEnvironmentKeyInToken') {
-      console.log('[APNs] Sandbox failed with BadEnvironmentKeyInToken, trying production...');
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:50',message:'Retrying with production',data:{reason:result.failed[0].response?.reason},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
-      options.production = true;
-      provider = new apn.Provider(options);
-      useSandbox = false;
-      result = await provider.send(notification, pushToken);
-    }
+    const result = await provider.send(notification, pushToken);
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:44',message:'provider.send completed',data:{sent:result.sent.length,failed:result.failed.length,failedDetails:JSON.stringify(result.failed)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:44',message:'provider.send completed',data:{sent:result.sent.length,failed:result.failed.length,failedDetails:result.failed.length>0?JSON.stringify({device:result.failed[0].device,status:result.failed[0].status,reason:result.failed[0].response?.reason}):'none'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
 
-    // Check result
-    if (result.sent.length > 0) {
+    // Check result - per guide: detailed error handling
+    if (result.failed.length > 0) {
+      const failedDevice = result.failed[0];
+      const errorReason = failedDevice.response?.reason || 'Unknown error';
+      console.error('[APNs] Failed Notification:', {
+        device: failedDevice.device,
+        status: failedDevice.status,
+        response: failedDevice.response,
+      });
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:48',message:'Notification sent successfully',data:{sent:result.sent.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:57',message:'Notification failed',data:{reason:errorReason,device:String(failedDevice.device||'unknown'),status:failedDevice.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      return false;
+    }
+
+    if (result.sent.length > 0) {
+      console.log('[APNs] Sent Successfully:', result.sent[0]);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:48',message:'Notification sent successfully',data:{sent:result.sent.length,device:result.sent[0]?.device},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
       // #endregion
       return true;
-    }
-
-    if (result.failed.length > 0) {
-      const failure = result.failed[0];
-      const errorReason = failure.response?.reason || 'Unknown error';
-      console.error(`[APNs] Failed to send notification: ${errorReason}`);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:57',message:'Notification failed',data:{reason:errorReason,device:String(failure.device||'unknown')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
     }
 
     return false;
@@ -105,7 +94,7 @@ export async function sendSilentPush(
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:57',message:'Error in sendSilentPush',data:{errorMessage:error instanceof Error?error.message:'unknown',errorStack:error instanceof Error?error.stack:'no stack'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
     // #endregion
-    console.error('Error sending silent push notification:', error);
+    console.error('[APNs] General Error:', error);
     return false;
   }
 }
