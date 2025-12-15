@@ -31,17 +31,18 @@ export async function sendSilentPush(
 
     // Configure APNs provider using dedicated 'apn' library
     // APNs keys work for both sandbox and production
-    // Try production first (required for Wallet passes), fallback to sandbox if needed
+    // For testing, try sandbox first (physical devices often need sandbox during development)
+    // For production, Wallet passes require production APNs
     const keyValue = authKey.includes('BEGIN') ? authKey : Buffer.from(authKey, 'utf-8');
     
-    // Try production first (Wallet passes require production)
+    // Try sandbox first for testing, then production
     let options = {
       token: {
         key: keyValue,
         keyId: appleCredentials.apns_key_id,
         teamId: appleCredentials.team_id,
       },
-      production: true,
+      production: false, // Start with sandbox for testing
     };
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:28',message:'APNs options configured',data:{keyId:options.token.keyId,teamId:options.token.teamId,production:options.production},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
@@ -67,15 +68,15 @@ export async function sendSilentPush(
     // #endregion
     let result = await provider.send(notification, pushToken);
     
-    // If production fails with BadEnvironmentKeyInToken, try sandbox
+    // If sandbox fails with BadEnvironmentKeyInToken, try production
     if (result.failed.length > 0 && result.failed[0].response?.reason === 'BadEnvironmentKeyInToken') {
-      console.log('[APNs] Production failed with BadEnvironmentKeyInToken, trying sandbox...');
+      console.log('[APNs] Sandbox failed with BadEnvironmentKeyInToken, trying production...');
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:50',message:'Retrying with sandbox',data:{reason:result.failed[0].response?.reason},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:50',message:'Retrying with production',data:{reason:result.failed[0].response?.reason},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
       // #endregion
-      options.production = false;
+      options.production = true;
       provider = new apn.Provider(options);
-      useSandbox = true;
+      useSandbox = false;
       result = await provider.send(notification, pushToken);
     }
     // #region agent log
