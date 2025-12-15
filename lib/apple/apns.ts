@@ -23,9 +23,22 @@ export async function sendSilentPush(
       return false;
     }
 
-    // Prepare APNs auth key - use as string (PEM format)
-    // The guide suggests Base64, but we store as PEM text, so use directly
-    const authKey = appleCredentials.apns_auth_key.trim();
+    // Prepare APNs auth key
+    // The guide suggests Base64 encoding, but we store as PEM text
+    // Try both: if it looks like base64 (no BEGIN/END), decode it; otherwise use as PEM string
+    let authKey = appleCredentials.apns_auth_key.trim();
+    
+    // If key doesn't have BEGIN/END markers, it might be base64 encoded
+    if (!authKey.includes('BEGIN') && !authKey.includes('END')) {
+      try {
+        // Try to decode as base64
+        authKey = Buffer.from(authKey, 'base64').toString('ascii');
+        console.log('[APNs] Decoded key from base64');
+      } catch (e) {
+        // Not base64, use as-is
+        console.log('[APNs] Key is not base64, using as-is');
+      }
+    }
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:20',message:'Auth key prepared',data:{keyLength:authKey.length,keyStartsWith:authKey.substring(0,50),hasBegin:authKey.includes('BEGIN'),hasEnd:authKey.includes('END')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
