@@ -87,8 +87,11 @@ async function handleRegisterDevice(
     const deviceID = pathParts[1];
     const serialNumber = pathParts[4];
 
+    console.log(`[Device Registration] Device ID: ${deviceID}, Serial: ${serialNumber}, Pass ID: ${pass.id}`);
+
     // Verify serial number matches
     if (pass.serial_number !== serialNumber) {
+      console.error(`[Device Registration] Serial number mismatch: expected ${pass.serial_number}, got ${serialNumber}`);
       return new NextResponse('Forbidden', { status: 403 });
     }
 
@@ -97,8 +100,11 @@ async function handleRegisterDevice(
     const pushToken = body.trim();
 
     if (!pushToken) {
+      console.error('[Device Registration] No push token provided');
       return new NextResponse('Bad Request', { status: 400 });
     }
+
+    console.log(`[Device Registration] Push token received: ${pushToken.substring(0, 20)}...`);
 
     // Find or create device
     let { data: device, error: deviceError } = await supabaseAdmin
@@ -145,10 +151,11 @@ async function handleRegisterDevice(
       });
 
     if (regError) {
-      console.error('Error creating registration:', regError);
+      console.error('[Device Registration] Error creating registration:', regError);
       return new NextResponse('Internal Server Error', { status: 500 });
     }
 
+    console.log(`[Device Registration] Successfully registered device ${deviceID} for pass ${pass.id}`);
     return new NextResponse('', { status: 200 });
   } catch (error) {
     console.error('Error in handleRegisterDevice:', error);

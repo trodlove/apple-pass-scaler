@@ -7,6 +7,28 @@ export default function TestPassPage() {
   const [loading, setLoading] = useState(false);
   const [testingNotification, setTestingNotification] = useState(false);
   const [notificationResult, setNotificationResult] = useState<string | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+  const [statusInfo, setStatusInfo] = useState<any>(null);
+
+  async function checkStatus() {
+    setCheckingStatus(true);
+    setStatusInfo(null);
+    
+    try {
+      const response = await fetch('/api/debug/pass-status');
+      const data = await response.json();
+      
+      if (response.ok) {
+        setStatusInfo(data);
+      } else {
+        setStatusInfo({ error: data.error });
+      }
+    } catch (error) {
+      setStatusInfo({ error: error instanceof Error ? error.message : 'Unknown error' });
+    } finally {
+      setCheckingStatus(false);
+    }
+  }
 
   async function testNotification() {
     setTestingNotification(true);
@@ -137,8 +159,70 @@ export default function TestPassPage() {
             Skip for now
           </p>
 
-          {/* Test Notification Section */}
+          {/* Diagnostic Section */}
           <div className="mt-8 pt-8 border-t border-gray-200">
+            <h3 className="text-lg font-semibold mb-4 text-center text-gray-800">
+              Diagnostics
+            </h3>
+            <button
+              onClick={checkStatus}
+              disabled={checkingStatus}
+              className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-3 hover:from-blue-600 hover:to-cyan-600 transition-all disabled:opacity-70 disabled:cursor-not-allowed shadow-lg mb-4"
+            >
+              {checkingStatus ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Checking...</span>
+                </>
+              ) : (
+                <>
+                  <span>🔍 Check Registration Status</span>
+                </>
+              )}
+            </button>
+            {statusInfo && (
+              <div className="mt-4 p-4 rounded-lg bg-gray-50 text-sm">
+                {statusInfo.error ? (
+                  <div className="text-red-600">{statusInfo.error}</div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="font-semibold">Total Passes: {statusInfo.total_passes}</div>
+                    {statusInfo.passes && statusInfo.passes.length > 0 && (
+                      <div className="space-y-3">
+                        {statusInfo.passes.map((pass: any, idx: number) => (
+                          <div key={idx} className="border rounded p-3 bg-white">
+                            <div className="font-medium mb-2">Pass #{idx + 1}</div>
+                            <div className="text-xs space-y-1">
+                              <div>Serial: {pass.serial_number}</div>
+                              <div>Has Web Service: {pass.has_web_service ? '✅' : '❌'}</div>
+                              {pass.has_web_service && (
+                                <div className="text-gray-600">URL: {pass.web_service_url}</div>
+                              )}
+                              <div>Registrations: {pass.registration_count}</div>
+                              {pass.registrations.length > 0 && (
+                                <div className="mt-2">
+                                  <div className="font-medium">Registered Devices:</div>
+                                  {pass.registrations.map((reg: any, rIdx: number) => (
+                                    <div key={rIdx} className="ml-2 text-gray-600">
+                                      • Device: {reg.device_library_identifier?.substring(0, 20)}...
+                                      {reg.has_push_token ? ' ✅ Token' : ' ❌ No Token'}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Test Notification Section */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
             <h3 className="text-lg font-semibold mb-4 text-center text-gray-800">
               Test Notifications
             </h3>
