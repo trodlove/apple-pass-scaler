@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       serialNumber,
       authenticationToken,
       click_id: clickId,
-      webServiceURL: `${request.nextUrl.origin}/api/apple/v1`,
+      webServiceURL: `${request.nextUrl.origin}/api/apple`,
       ...trackingParams,
       organizationName: 'Apple Pass Scaler',
       description: 'Wallet Pass',

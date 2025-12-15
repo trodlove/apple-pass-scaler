@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     const pass = passes[0];
     const baseUrl = request.nextUrl.origin;
-    const webServiceUrl = (pass.pass_data as any)?.webServiceURL || `${baseUrl}/api/apple/v1`;
+    const webServiceUrl = (pass.pass_data as any)?.webServiceURL || `${baseUrl}/api/apple`;
     
     // Test if we can construct the registration endpoint URL
     // Note: We can't actually test it without a real device, but we can verify the structure

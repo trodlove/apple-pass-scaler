@@ -278,7 +278,7 @@ async function handleGetPass(
       ...pass.pass_data,
       serialNumber: pass.serial_number,
       authenticationToken: pass.authentication_token,
-      webServiceURL: `${request.nextUrl.origin}/api/apple/v1`,
+      webServiceURL: `${request.nextUrl.origin}/api/apple`,
     };
 
     // Generate pass buffer

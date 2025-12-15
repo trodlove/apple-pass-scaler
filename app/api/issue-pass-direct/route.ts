@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
       authenticationToken,
       click_id: clickId,
       redirect_url: redirectUrl,
-      webServiceURL: `${request.nextUrl.origin}/api/apple/v1`,
+      webServiceURL: `${request.nextUrl.origin}/api/apple`,
       ...trackingParams,
       organizationName: 'Apple Pass Scaler',
       description: 'Wallet Pass',
