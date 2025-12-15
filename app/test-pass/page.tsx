@@ -198,7 +198,9 @@ export default function TestPassPage() {
                               {pass.has_web_service && (
                                 <div className="text-gray-600">URL: {pass.web_service_url}</div>
                               )}
-                              <div>Registrations: {pass.registration_count}</div>
+                              <div className={pass.registration_count > 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
+                                Registrations: {pass.registration_count}
+                              </div>
                               {pass.registrations.length > 0 && (
                                 <div className="mt-2">
                                   <div className="font-medium">Registered Devices:</div>
@@ -208,6 +210,18 @@ export default function TestPassPage() {
                                       {reg.has_push_token ? ' ✅ Token' : ' ❌ No Token'}
                                     </div>
                                   ))}
+                                </div>
+                              )}
+                              {pass.registration_count === 0 && (
+                                <div className="mt-2 p-2 bg-yellow-50 rounded text-yellow-800 text-xs">
+                                  <div className="font-semibold mb-1">⚠️ No Registration Yet</div>
+                                  <div className="space-y-1">
+                                    <div>• Make sure you actually ADDED the pass to Wallet (not just downloaded)</div>
+                                    <div>• Open the pass in Wallet - this triggers registration</div>
+                                    <div>• Wait 10-30 seconds after adding</div>
+                                    <div>• Try removing and re-adding the pass</div>
+                                    <div>• Check Vercel logs for registration attempts</div>
+                                  </div>
                                 </div>
                               )}
                             </div>
