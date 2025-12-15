@@ -62,11 +62,12 @@ export default function TestPassPage() {
         ? window.location.origin
         : 'https://apple-pass-scaler.vercel.app';
       
-      // Build the pass generation URL
+      // Build the pass generation URL with a unique identifier to force a new pass
       const passUrl = new URL(`${baseUrl}/api/generate-pass`);
-      passUrl.searchParams.set('click_id', `test_${Date.now()}`);
+      passUrl.searchParams.set('click_id', `test_${Date.now()}_${Math.random().toString(36).substring(7)}`);
       passUrl.searchParams.set('utm_source', 'test');
       passUrl.searchParams.set('utm_campaign', 'wallet_test');
+      passUrl.searchParams.set('force_new', 'true'); // Force a new pass each time
       
       // Direct navigation approach - iOS recognizes .pkpass files automatically
       // This avoids CORS issues and works better on iOS Safari
@@ -233,6 +234,18 @@ export default function TestPassPage() {
                 )}
               </div>
             )}
+          </div>
+
+          {/* How to Remove Passes Section */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <h3 className="text-lg font-semibold mb-2 text-center text-gray-800">
+              How to Remove Passes from Wallet
+            </h3>
+            <div className="text-xs text-gray-600 space-y-1 mb-4 p-3 bg-blue-50 rounded-lg">
+              <div><strong>Method 1:</strong> Open Wallet → Tap the pass → Tap the "i" (info) button → Scroll down → Tap "Remove Pass"</div>
+              <div><strong>Method 2:</strong> Open Wallet → Tap the pass → Swipe down → Tap "Remove"</div>
+              <div><strong>Method 3:</strong> If you can't see the pass, it might not be fully added. Try adding a fresh pass below.</div>
+            </div>
           </div>
 
           {/* Test Notification Section */}
