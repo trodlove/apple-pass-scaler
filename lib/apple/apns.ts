@@ -83,15 +83,18 @@ export async function sendSilentPush(
     if (result.failed.length > 0) {
       const failedDevice = result.failed[0];
       const errorReason = failedDevice.response?.reason || 'Unknown error';
+      const errorStatus = failedDevice.status;
       console.error('[APNs] Failed Notification:', {
         device: failedDevice.device,
-        status: failedDevice.status,
+        status: errorStatus,
         response: failedDevice.response,
+        reason: errorReason,
       });
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:57',message:'Notification failed',data:{reason:errorReason,device:String(failedDevice.device||'unknown'),status:failedDevice.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:57',message:'Notification failed',data:{reason:errorReason,device:String(failedDevice.device||'unknown'),status:errorStatus,fullResponse:JSON.stringify(failedDevice.response)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
       // #endregion
-      return false;
+      // Throw error with details so caller can see it
+      throw new Error(`APNs failed: ${errorReason} (status: ${errorStatus})`);
     }
 
     if (result.sent.length > 0) {
@@ -108,7 +111,8 @@ export async function sendSilentPush(
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:57',message:'Error in sendSilentPush',data:{errorMessage:error instanceof Error?error.message:'unknown',errorStack:error instanceof Error?error.stack:'no stack'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
     // #endregion
     console.error('[APNs] General Error:', error);
-    return false;
+    // Re-throw so caller can see the error
+    throw error;
   }
 }
 
@@ -131,7 +135,14 @@ export async function sendSilentPushToMultiple(
   }
 
   const results = await Promise.allSettled(
-    pushTokens.map(token => sendSilentPush(token, appleCredentials))
+    pushTokens.map(async (token) => {
+      try {
+        return await sendSilentPush(token, appleCredentials);
+      } catch (error) {
+        console.error(`[APNs] Error sending to token ${token.substring(0, 20)}...:`, error);
+        throw error;
+      }
+    })
   );
   // #region agent log
   fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:78',message:'All push sends completed',data:{resultsCount:results.length,results:JSON.stringify(results.map((r,i)=>({index:i,status:r.status,value:r.status==='fulfilled'?r.value:'rejected',reason:r.status==='rejected'?r.reason?.message:'none'})))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});

@@ -143,8 +143,25 @@ export async function POST(request: NextRequest) {
     };
 
     // Send push notifications
-    const { success, failed } = await sendSilentPushToMultiple(pushTokens, credentials);
+    let success = 0;
+    let failed = 0;
+    let errorDetails: any = null;
+    
+    try {
+      const result = await sendSilentPushToMultiple(pushTokens, credentials);
+      success = result.success;
+      failed = result.failed;
+    } catch (error) {
+      failed = pushTokens.length;
+      errorDetails = {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      };
+      console.error('[Test Specific Pass] Error sending notifications:', error);
+    }
 
+    // Get detailed error info from console logs if available
+    // The actual error will be in Vercel logs, but we can return what we know
     return NextResponse.json({
       success: success > 0,
       message: success > 0 ? 'Test notification sent successfully' : 'Failed to send notification',
@@ -158,6 +175,15 @@ export async function POST(request: NextRequest) {
           total: pushTokens.length,
         },
         devices: pushTokens.length,
+        pushTokenPreview: pushTokens[0]?.substring(0, 20) + '...',
+        credentials: {
+          hasKey: !!credentials.apns_auth_key,
+          keyId: credentials.apns_key_id,
+          teamId: credentials.team_id,
+          passTypeId: credentials.pass_type_id,
+        },
+        errorDetails,
+        note: 'Check Vercel logs for detailed APNs error (BadEnvironmentKeyInToken, etc.)',
       },
     }, { status: success > 0 ? 200 : 500 });
   } catch (error) {
