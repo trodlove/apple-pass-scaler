@@ -226,10 +226,10 @@ export default function TestPassPage() {
                                   <div className="font-semibold mb-1">⚠️ No Registration Yet</div>
                                   <div className="space-y-1 mb-2">
                                     <div><strong>Critical Steps:</strong></div>
-                                    <div>1. Make sure you TAPPED "Add" in the Wallet sheet (don't dismiss it)</div>
+                                    <div>1. Make sure you TAPPED &quot;Add&quot; in the Wallet sheet (don&apos;t dismiss it)</div>
                                     <div>2. Open the pass in Wallet app - this triggers registration</div>
                                     <div>3. Wait 30-60 seconds after adding</div>
-                                    <div>4. Check Vercel logs for "[Device Registration]" messages</div>
+                                    <div>4. Check Vercel logs for &quot;[Device Registration]&quot; messages</div>
                                   </div>
                                   {statusInfo.endpoint_info.registration_endpoint && (
                                     <div className="mt-2 p-2 bg-blue-50 rounded text-blue-800">
@@ -258,9 +258,9 @@ export default function TestPassPage() {
               How to Remove Passes from Wallet
             </h3>
             <div className="text-xs text-gray-600 space-y-1 mb-4 p-3 bg-blue-50 rounded-lg">
-              <div><strong>Method 1:</strong> Open Wallet → Tap the pass → Tap the "i" (info) button → Scroll down → Tap "Remove Pass"</div>
-              <div><strong>Method 2:</strong> Open Wallet → Tap the pass → Swipe down → Tap "Remove"</div>
-              <div><strong>Method 3:</strong> If you can't see the pass, it might not be fully added. Try adding a fresh pass below.</div>
+              <div><strong>Method 1:</strong> Open Wallet → Tap the pass → Tap the &quot;i&quot; (info) button → Scroll down → Tap &quot;Remove Pass&quot;</div>
+              <div><strong>Method 2:</strong> Open Wallet → Tap the pass → Swipe down → Tap &quot;Remove&quot;</div>
+              <div><strong>Method 3:</strong> If you can&apos;t see the pass, it might not be fully added. Try adding a fresh pass below.</div>
             </div>
           </div>
 
