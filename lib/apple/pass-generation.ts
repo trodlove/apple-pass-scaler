@@ -88,6 +88,34 @@ export async function generatePassBuffer(
       }
     }
 
+    // Add backFields with notification field (CRITICAL for push notifications)
+    // This field must have changeMessage property for notifications to work
+    if (!passJson.backFields) {
+      passJson.backFields = [];
+    }
+    
+    // Add or update notification field
+    const notificationFieldIndex = passJson.backFields.findIndex((f: any) => f.key === 'notificationField');
+    const notificationMessage = passData.notificationMessage || passData.broadcastMessage || 'Welcome! Check back for updates.';
+    
+    if (notificationFieldIndex >= 0) {
+      // Update existing field
+      passJson.backFields[notificationFieldIndex] = {
+        key: 'notificationField',
+        label: 'Last Message',
+        value: notificationMessage,
+        changeMessage: '%@', // This is what triggers the notification when the value changes
+      };
+    } else {
+      // Add new field
+      passJson.backFields.push({
+        key: 'notificationField',
+        label: 'Last Message',
+        value: notificationMessage,
+        changeMessage: '%@', // This is what triggers the notification when the value changes
+      });
+    }
+
     // Add website URL if provided
     if (passData.websiteUrl) {
       passJson.associatedStoreIdentifiers = [];
