@@ -121,8 +121,23 @@ export async function GET(request: NextRequest) {
         // Send push notifications if there are devices
         if (registrations && registrations.length > 0 && pass.apple_account_id) {
           const pushTokens = registrations
-            .map((reg: any) => reg.devices?.push_token)
-            .filter((token: string) => token);
+            .map((reg: any) => {
+              let token = reg.devices?.push_token;
+              if (!token) return null;
+              
+              // Parse JSON string if token is stored as JSON
+              try {
+                const parsed = JSON.parse(token);
+                if (parsed.pushToken) {
+                  return parsed.pushToken;
+                }
+              } catch (e) {
+                // Not JSON, use as-is
+              }
+              
+              return token;
+            })
+            .filter((token: string | null): token is string => !!token && token.trim().length > 0);
 
           if (pushTokens.length > 0) {
             // Get account credentials

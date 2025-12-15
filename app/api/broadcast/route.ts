@@ -97,11 +97,22 @@ export async function POST(request: NextRequest) {
 
         const device = reg.devices as any;
         if (!device?.push_token) continue;
-
+        
+        // Parse JSON string if token is stored as JSON
+        let token = device.push_token;
+        try {
+          const parsed = JSON.parse(token);
+          if (parsed.pushToken) {
+            token = parsed.pushToken;
+          }
+        } catch (e) {
+          // Not JSON, use as-is
+        }
+        
         if (!tokensByAccount.has(pass.apple_account_id)) {
           tokensByAccount.set(pass.apple_account_id, []);
         }
-        tokensByAccount.get(pass.apple_account_id)!.push(device.push_token);
+        tokensByAccount.get(pass.apple_account_id)!.push(token);
       }
     }
 

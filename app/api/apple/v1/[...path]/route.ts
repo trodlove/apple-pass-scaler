@@ -104,11 +104,21 @@ async function handleRegisterDevice(
 
     // Read push token from request body
     const body = await request.text();
-    const pushToken = body.trim();
+    let pushToken = body.trim();
 
     if (!pushToken) {
       console.error('[Device Registration] No push token provided');
       return new NextResponse('Bad Request', { status: 400 });
+    }
+
+    // Parse JSON if Wallet sent token as JSON string (e.g., {"pushToken":"..."})
+    try {
+      const parsed = JSON.parse(pushToken);
+      if (parsed.pushToken) {
+        pushToken = parsed.pushToken;
+      }
+    } catch (e) {
+      // Not JSON, use as-is (should be plain hex token)
     }
 
     console.log(`[Device Registration] Push token received: ${pushToken.substring(0, 20)}...`);

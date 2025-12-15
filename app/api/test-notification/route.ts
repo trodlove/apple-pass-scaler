@@ -92,16 +92,33 @@ export async function POST(request: NextRequest) {
     // #endregion
     // Get push tokens
     // Handle both array and object cases for devices (Supabase can return either)
+    // Also parse JSON strings if the token is stored as JSON
     const pushTokens = registrations
       .map((reg: any) => {
+        let token: string | undefined;
         // If devices is an array, get the first one
         if (Array.isArray(reg.devices)) {
-          return reg.devices[0]?.push_token;
+          token = reg.devices[0]?.push_token;
+        } else {
+          // If devices is an object, get push_token directly
+          token = reg.devices?.push_token;
         }
-        // If devices is an object, get push_token directly
-        return reg.devices?.push_token;
+        
+        if (!token) return null;
+        
+        // Parse JSON string if token is stored as JSON (e.g., {"pushToken":"..."})
+        try {
+          const parsed = JSON.parse(token);
+          if (parsed.pushToken) {
+            return parsed.pushToken;
+          }
+        } catch (e) {
+          // Not JSON, use as-is
+        }
+        
+        return token;
       })
-      .filter((token: string) => token && token.trim().length > 0);
+      .filter((token: string | null): token is string => !!token && token.trim().length > 0);
     // #region agent log
     console.log('[Test Notification] Extracted push tokens:', pushTokens);
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/test-notification/route.ts:96',message:'Push tokens extracted',data:{pushTokenCount:pushTokens.length,pushTokens:pushTokens.map(t=>t.substring(0,20)+'...')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
