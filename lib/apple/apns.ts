@@ -100,6 +100,9 @@ export async function sendSilentPushToMultiple(
   pushTokens: string[],
   appleCredentials: AppleCredentials
 ): Promise<{ success: number; failed: number }> {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:69',message:'sendSilentPushToMultiple called',data:{pushTokenCount:pushTokens.length,pushTokens:pushTokens.map(t=>t.substring(0,20)+'...')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+  // #endregion
   if (pushTokens.length === 0) {
     return { success: 0, failed: 0 };
   }
@@ -107,9 +110,15 @@ export async function sendSilentPushToMultiple(
   const results = await Promise.allSettled(
     pushTokens.map(token => sendSilentPush(token, appleCredentials))
   );
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:78',message:'All push sends completed',data:{resultsCount:results.length,results:JSON.stringify(results.map((r,i)=>({index:i,status:r.status,value:r.status==='fulfilled'?r.value:'rejected',reason:r.status==='rejected'?r.reason?.message:'none'})))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+  // #endregion
 
   const success = results.filter(r => r.status === 'fulfilled' && r.value === true).length;
   const failed = results.length - success;
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:83',message:'sendSilentPushToMultiple returning',data:{success,failed,total:pushTokens.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+  // #endregion
 
   return { success, failed };
 }

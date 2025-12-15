@@ -85,10 +85,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/test-notification/route.ts:88',message:'Extracting push tokens',data:{registrationsCount:registrations.length,registrations:JSON.stringify(registrations.map((r:any)=>({deviceId:r.device_id,hasDevices:!!r.devices,hasPushToken:!!r.devices?.push_token,pushTokenPreview:r.devices?.push_token?.substring(0,20)||'null'})))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+    // #endregion
     // Get push tokens
     const pushTokens = registrations
       .map((reg: any) => reg.devices?.push_token)
       .filter((token: string) => token);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/test-notification/route.ts:92',message:'Push tokens extracted',data:{pushTokenCount:pushTokens.length,pushTokens:pushTokens.map(t=>t.substring(0,20)+'...')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+    // #endregion
 
     if (pushTokens.length === 0) {
       return NextResponse.json(
