@@ -6,13 +6,13 @@ import { Wallet, Check } from 'lucide-react';
 export default function TestPassPage() {
   const [loading, setLoading] = useState(false);
 
-  async function addToWallet() {
+  function addToWallet() {
     setLoading(true);
     
     try {
       // Get the Vercel URL from environment or use the production URL
-      const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL 
-        ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+      const baseUrl = typeof window !== 'undefined' && window.location.origin
+        ? window.location.origin
         : 'https://apple-pass-scaler.vercel.app';
       
       // Build the pass generation URL
@@ -21,45 +21,17 @@ export default function TestPassPage() {
       passUrl.searchParams.set('utm_source', 'test');
       passUrl.searchParams.set('utm_campaign', 'wallet_test');
       
-      // Fetch the pass file using the direct download method
-      const response = await fetch(passUrl.toString());
+      // Direct navigation approach - iOS recognizes .pkpass files automatically
+      // This avoids CORS issues and works better on iOS Safari
+      // iOS will automatically show the "Add to Wallet" sheet when it detects the .pkpass MIME type
+      window.location.href = passUrl.toString();
       
-      if (!response.ok) {
-        throw new Error(`Failed to generate pass: ${response.status}`);
-      }
-      
-      // Convert response to Blob
-      const blob = await response.blob();
-      
-      // Verify the MIME type
-      if (blob.type !== 'application/vnd.apple.pkpass') {
-        console.warn('Unexpected MIME type:', blob.type);
-      }
-      
-      // Create object URL from Blob
-      const objectUrl = window.URL.createObjectURL(blob);
-      
-      // Create temporary anchor element
-      const link = document.createElement('a');
-      link.href = objectUrl;
-      link.download = 'pass.pkpass';
-      link.style.display = 'none';
-      
-      // Append to body and click programmatically
-      document.body.appendChild(link);
-      link.click(); // This triggers the Wallet sheet on iOS
-      
-      // Clean up
-      document.body.removeChild(link);
-      setTimeout(() => {
-        window.URL.revokeObjectURL(objectUrl);
-      }, 100);
+      // Note: The page will navigate away, so we don't need to restore the loading state
       
     } catch (error) {
       console.error('Error adding pass to wallet:', error);
-      alert('Failed to add pass to wallet. Please try again.');
-    } finally {
       setLoading(false);
+      alert('Failed to add pass to wallet. Please try again.');
     }
   }
 
