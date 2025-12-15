@@ -17,18 +17,23 @@ export async function sendSilentPush(
   // #endregion
   try {
     // Configure APNs provider with token-based authentication
-    const authKeyBuffer = Buffer.from(appleCredentials.apns_auth_key, 'utf-8');
+    // Try passing key as string (PEM format) - library accepts both Buffer and string
+    const authKey = appleCredentials.apns_auth_key.trim();
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:20',message:'Auth key buffer created',data:{bufferLength:authKeyBuffer.length,bufferStartsWith:authKeyBuffer.toString('utf-8',0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:20',message:'Auth key prepared',data:{keyLength:authKey.length,keyStartsWith:authKey.substring(0,50),hasBegin:authKey.includes('BEGIN'),hasEnd:authKey.includes('END')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
+    // Try both string and Buffer - library should accept either
+    // For token auth, the key can be a PEM string or Buffer
+    const keyValue = authKey.includes('BEGIN') ? authKey : Buffer.from(authKey, 'utf-8');
     const settings = {
       apn: {
         token: {
-          key: authKeyBuffer,
+          key: keyValue,
           keyId: appleCredentials.apns_key_id,
           teamId: appleCredentials.team_id,
         },
-        production: process.env.NODE_ENV === 'production', // Use production APNs in production
+        // Use production APNs in production, but allow override via env var for testing
+        production: process.env.APNS_PRODUCTION !== 'false' && (process.env.NODE_ENV === 'production' || process.env.APNS_PRODUCTION === 'true'),
       },
     };
     // #region agent log
