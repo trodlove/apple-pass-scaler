@@ -15,13 +15,21 @@ export default function TestPassPage() {
     setStatusInfo(null);
     
     try {
-      const response = await fetch('/api/debug/pass-status');
-      const data = await response.json();
+      const [statusResponse, endpointResponse] = await Promise.all([
+        fetch('/api/debug/pass-status'),
+        fetch('/api/debug/check-endpoint'),
+      ]);
       
-      if (response.ok) {
-        setStatusInfo(data);
+      const statusData = await statusResponse.json();
+      const endpointData = await endpointResponse.json();
+      
+      if (statusResponse.ok) {
+        setStatusInfo({
+          ...statusData,
+          endpoint_info: endpointData,
+        });
       } else {
-        setStatusInfo({ error: data.error });
+        setStatusInfo({ error: statusData.error, endpoint_info: endpointData });
       }
     } catch (error) {
       setStatusInfo({ error: error instanceof Error ? error.message : 'Unknown error' });
@@ -213,16 +221,24 @@ export default function TestPassPage() {
                                   ))}
                                 </div>
                               )}
-                              {pass.registration_count === 0 && (
+                              {pass.registration_count === 0 && statusInfo?.endpoint_info && (
                                 <div className="mt-2 p-2 bg-yellow-50 rounded text-yellow-800 text-xs">
                                   <div className="font-semibold mb-1">⚠️ No Registration Yet</div>
-                                  <div className="space-y-1">
-                                    <div>• Make sure you actually ADDED the pass to Wallet (not just downloaded)</div>
-                                    <div>• Open the pass in Wallet - this triggers registration</div>
-                                    <div>• Wait 10-30 seconds after adding</div>
-                                    <div>• Try removing and re-adding the pass</div>
-                                    <div>• Check Vercel logs for registration attempts</div>
+                                  <div className="space-y-1 mb-2">
+                                    <div><strong>Critical Steps:</strong></div>
+                                    <div>1. Make sure you TAPPED "Add" in the Wallet sheet (don't dismiss it)</div>
+                                    <div>2. Open the pass in Wallet app - this triggers registration</div>
+                                    <div>3. Wait 30-60 seconds after adding</div>
+                                    <div>4. Check Vercel logs for "[Device Registration]" messages</div>
                                   </div>
+                                  {statusInfo.endpoint_info.registration_endpoint && (
+                                    <div className="mt-2 p-2 bg-blue-50 rounded text-blue-800">
+                                      <div className="font-semibold mb-1">Endpoint Info:</div>
+                                      <div className="text-xs font-mono break-all">
+                                        {statusInfo.endpoint_info.registration_endpoint.url_format}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>

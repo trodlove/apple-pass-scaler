@@ -33,9 +33,13 @@ async function handleRequest(request: NextRequest, method: string) {
     // Expected: ['api', 'apple', 'v1', ...rest]
     const applePath = pathSegments.slice(3).join('/');
 
+    // Log all incoming requests for debugging
+    console.log(`[Apple Web Service] ${method} ${applePath} - User-Agent: ${request.headers.get('user-agent')?.substring(0, 50)}`);
+
     // Authenticate the request
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('ApplePass ')) {
+      console.log(`[Apple Web Service] Missing or invalid Authorization header`);
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
@@ -49,8 +53,11 @@ async function handleRequest(request: NextRequest, method: string) {
       .single();
 
     if (authError || !pass) {
+      console.log(`[Apple Web Service] Authentication failed - token: ${authenticationToken.substring(0, 10)}...`);
       return new NextResponse('Unauthorized', { status: 401 });
     }
+
+    console.log(`[Apple Web Service] Authenticated - Pass: ${pass.serial_number}, Path: ${applePath}`);
 
     // Route to appropriate handler based on path and method
     if (method === 'POST' && applePath.startsWith('devices/') && applePath.includes('/registrations/')) {
