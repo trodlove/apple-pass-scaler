@@ -86,12 +86,25 @@ export async function POST(request: NextRequest) {
     }
 
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/test-notification/route.ts:88',message:'Extracting push tokens',data:{registrationsCount:registrations.length,registrations:JSON.stringify(registrations.map((r:any)=>({deviceId:r.device_id,hasDevices:!!r.devices,hasPushToken:!!r.devices?.push_token,pushTokenPreview:r.devices?.push_token?.substring(0,20)||'null'})))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+    console.log('[Test Notification] Raw registrations:', JSON.stringify(registrations, null, 2));
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/test-notification/route.ts:88',message:'Extracting push tokens',data:{registrationsCount:registrations.length,registrationsRaw:JSON.stringify(registrations),firstReg:JSON.stringify(registrations[0]),devicesType:Array.isArray(registrations[0]?.devices)?'array':'object',hasDevices:!!registrations[0]?.devices},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
     // #endregion
     // Get push tokens
+    // Handle both array and object cases for devices (Supabase can return either)
     const pushTokens = registrations
-      .map((reg: any) => reg.devices?.push_token)
-      .filter((token: string) => token);
+      .map((reg: any) => {
+        // If devices is an array, get the first one
+        if (Array.isArray(reg.devices)) {
+          return reg.devices[0]?.push_token;
+        }
+        // If devices is an object, get push_token directly
+        return reg.devices?.push_token;
+      })
+      .filter((token: string) => token && token.trim().length > 0);
+    // #region agent log
+    console.log('[Test Notification] Extracted push tokens:', pushTokens);
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/test-notification/route.ts:96',message:'Push tokens extracted',data:{pushTokenCount:pushTokens.length,pushTokens:pushTokens.map(t=>t.substring(0,20)+'...')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+    // #endregion
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/test-notification/route.ts:92',message:'Push tokens extracted',data:{pushTokenCount:pushTokens.length,pushTokens:pushTokens.map(t=>t.substring(0,20)+'...')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
     // #endregion
