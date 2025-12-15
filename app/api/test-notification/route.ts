@@ -38,9 +38,10 @@ export async function POST(request: NextRequest) {
     const testMessage = `Test notification - ${new Date().toLocaleTimeString()}`;
 
     // Get all registered devices for this pass
+    // Use LEFT JOIN (without !inner) to match working examples
     const { data: registrations, error: registrationsError } = await supabaseAdmin
       .from('registrations')
-      .select('device_id, devices!inner(push_token)')
+      .select('device_id, devices(push_token)')
       .eq('pass_id', pass.id);
 
     if (registrationsError) {
