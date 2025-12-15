@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local Saver Spot - Add to Wallet</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #f5f3ff 0%, #e0e7ff 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: bold;
+      color: #7c3aed;
+      margin-bottom: 12px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background-color: #e5e7eb;
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #8b5cf6 0%, #3b82f6 100%);
+      width: 33%;
+      border-radius: 9999px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    .icon-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+
+    .icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .icon svg {
+      width: 40px;
+      height: 40px;
+      color: white;
+    }
+
+    .heading {
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      color: #111827;
+      margin-bottom: 16px;
+    }
+
+    .description {
+      color: #6b7280;
+      text-align: center;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .highlight {
+      color: #7c3aed;
+      font-weight: 600;
+    }
+
+    .features {
+      margin-bottom: 32px;
+    }
+
+    .feature {
+      background-color: #f0fdf4;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .feature:last-child {
+      margin-bottom: 0;
+    }
+
+    .check-icon {
+      width: 24px;
+      height: 24px;
+      background-color: #22c55e;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .check-icon svg {
+      width: 16px;
+      height: 16px;
+      color: white;
+    }
+
+    .feature-text {
+      color: #374151;
+      font-size: 15px;
+    }
+
+    .wallet-button {
+      width: 100%;
+      background: linear-gradient(90deg, #8b5cf6 0%, #3b82f6 100%);
+      color: white;
+      font-weight: bold;
+      padding: 16px 24px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-size: 16px;
+      transition: all 0.2s;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .wallet-button:hover:not(:disabled) {
+      background: linear-gradient(90deg, #7c3aed 0%, #2563eb 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .wallet-button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .wallet-button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .wallet-button svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .skip-link {
+      text-align: center;
+      color: #6b7280;
+      font-size: 14px;
+      margin-top: 16px;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .skip-link:hover {
+      color: #374151;
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid white;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>Important Step</h1>
+      <div class="progress-bar">
+        <div class="progress-fill"></div>
+      </div>
+    </div>
+
+    <!-- Main Card -->
+    <div class="card">
+      <!-- Icon -->
+      <div class="icon-container">
+        <div class="icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Heading -->
+      <h2 class="heading">This is Really Important!</h2>
+
+      <!-- Description -->
+      <p class="description">
+        Add your <span class="highlight">Local Saver Spot Wallet Pass</span> to receive your gift card digitally and get instant notifications about exclusive savings!
+      </p>
+
+      <!-- Features List -->
+      <div class="features">
+        <div class="feature">
+          <div class="check-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <span class="feature-text">Receive your digital gift card instantly</span>
+        </div>
+        <div class="feature">
+          <div class="check-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <span class="feature-text">Get notified about exclusive local deals</span>
+        </div>
+        <div class="feature">
+          <div class="check-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <span class="feature-text">Easy access from your phone wallet</span>
+        </div>
+      </div>
+
+      <!-- Add to Wallet Button -->
+      <button id="wallet-button" class="wallet-button" onclick="addToWallet()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+        </svg>
+        <span id="button-text">Add to Apple Wallet</span>
+      </button>
+
+      <!-- Skip Link -->
+      <p class="skip-link" onclick="skipStep()">Skip for now</p>
+    </div>
+  </div>
+
+  <script>
+    // Use the Vercel production URL
+    const PASS_BASE_URL = 'https://apple-pass-scaler.vercel.app';
+
+    async function addToWallet() {
+      const button = document.getElementById('wallet-button');
+      const buttonText = document.getElementById('button-text');
+      const originalText = buttonText.textContent;
+      
+      // Disable button and show loading state
+      button.disabled = true;
+      buttonText.innerHTML = '<div class="spinner"></div> Opening Wallet...';
+      
+      try {
+        // Build the pass generation URL
+        const passUrl = new URL(`${PASS_BASE_URL}/api/generate-pass`);
+        passUrl.searchParams.set('click_id', `test_${Date.now()}`);
+        passUrl.searchParams.set('utm_source', 'test');
+        passUrl.searchParams.set('utm_campaign', 'wallet_test');
+        
+        // Fetch the pass file using the direct download method
+        const response = await fetch(passUrl.toString());
+        
+        if (!response.ok) {
+          throw new Error(`Failed to generate pass: ${response.status}`);
+        }
+        
+        // Convert response to Blob
+        const blob = await response.blob();
+        
+        // Verify the MIME type (should be application/vnd.apple.pkpass)
+        if (blob.type !== 'application/vnd.apple.pkpass') {
+          console.warn('Unexpected MIME type:', blob.type);
+        }
+        
+        // Create object URL from Blob
+        const objectUrl = window.URL.createObjectURL(blob);
+        
+        // Create temporary anchor element
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = 'pass.pkpass'; // This is ignored by iOS for pkpass files
+        link.style.display = 'none';
+        
+        // Append to body and click programmatically
+        document.body.appendChild(link);
+        link.click(); // This triggers the Wallet sheet on iOS directly - no popup!
+        
+        // Clean up: remove link and revoke object URL
+        document.body.removeChild(link);
+        setTimeout(() => {
+          window.URL.revokeObjectURL(objectUrl);
+        }, 100);
+        
+        // Keep button in loading state briefly, then restore
+        setTimeout(() => {
+          button.disabled = false;
+          buttonText.textContent = originalText;
+        }, 2000);
+        
+      } catch (error) {
+        console.error('Error adding pass to wallet:', error);
+        
+        // Restore button on error
+        button.disabled = false;
+        buttonText.textContent = originalText;
+        
+        // Show error message to user
+        alert('Failed to add pass to wallet. Please try again.');
+      }
+    }
+
+    function skipStep() {
+      // Handle skip action - you can customize this
+      console.log('User skipped adding wallet pass');
+      // Optionally redirect or show next step
+    }
+  </script>
+</body>
+</html>
+
