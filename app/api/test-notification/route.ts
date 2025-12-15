@@ -123,8 +123,14 @@ export async function POST(request: NextRequest) {
       wwdr_cert: account.wwdr_cert,
     };
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/test-notification/route.ts:127',message:'About to send notifications',data:{pushTokenCount:pushTokens.length,pushTokens:pushTokens.map(t=>t.substring(0,20)+'...'),hasCredentials:!!credentials,teamId:credentials.team_id,passTypeId:credentials.pass_type_id,hasApnsKeyId:!!credentials.apns_key_id,hasApnsAuthKey:!!credentials.apns_auth_key},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     // Send push notifications
     const { success, failed } = await sendSilentPushToMultiple(pushTokens, credentials);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/test-notification/route.ts:130',message:'Notifications sent',data:{success,failed,total:pushTokens.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
 
     return NextResponse.json({
       success: true,
