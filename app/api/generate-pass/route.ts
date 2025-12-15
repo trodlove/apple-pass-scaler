@@ -13,13 +13,9 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log('📥 [Generate Pass] Request received');
-    
     // Capture all query parameters
     const searchParams = request.nextUrl.searchParams;
     const clickId = searchParams.get('click_id');
-    
-    console.log(`📥 [Generate Pass] Click ID: ${clickId}`);
     
     // Capture all tracking parameters
     const trackingParams: Record<string, any> = {};
@@ -30,20 +26,15 @@ export async function GET(request: NextRequest) {
     // Get active Apple account for pass generation
     const appleCredentials = await getActiveAppleAccount();
     if (!appleCredentials) {
-      console.error('❌ [Generate Pass] No active Apple Developer Account available');
       return new NextResponse('No active Apple Developer Account available', { 
         status: 500,
         headers: { 'Content-Type': 'text/plain' },
       });
     }
 
-    console.log(`✅ [Generate Pass] Using Apple account: ${appleCredentials.pass_type_id}`);
-
     // Generate serial number and authentication token
     const serialNumber = generateSerialNumber();
     const authenticationToken = generateToken();
-    
-    console.log(`🔑 [Generate Pass] Generated serial: ${serialNumber.substring(0, 20)}...`);
 
     // Get default template
     const { data: template, error: templateError } = await supabaseAdmin
@@ -67,7 +58,6 @@ export async function GET(request: NextRequest) {
       description: 'Wallet Pass',
       backgroundColor: 'rgb(255, 255, 255)',
       foregroundColor: 'rgb(0, 0, 0)',
-      notificationMessage: 'Welcome! Check back for updates.', // Default notification message
     };
 
     // Generate the pass buffer
@@ -89,8 +79,7 @@ export async function GET(request: NextRequest) {
       .single();
 
     // Create pass record in database
-    console.log(`💾 [Generate Pass] Inserting pass into database...`);
-    const { data: insertedPass, error: insertError } = await supabaseAdmin
+    const { error: insertError } = await supabaseAdmin
       .from('passes')
       .insert({
         serial_number: serialNumber,
@@ -99,15 +88,11 @@ export async function GET(request: NextRequest) {
         apple_account_id: appleAccount?.id || null,
         pass_data: passData,
         revenue: 0.00,
-      })
-      .select()
-      .single();
+      });
 
     if (insertError) {
-      console.error('❌ [Generate Pass] Error inserting pass:', insertError);
+      console.error('Error inserting pass:', insertError);
       // Continue anyway - the pass file is already generated
-    } else {
-      console.log(`✅ [Generate Pass] Pass created in database with ID: ${insertedPass?.id}`);
     }
 
     // Return the pass file with correct MIME type

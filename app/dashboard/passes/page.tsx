@@ -28,7 +28,6 @@ export default function PassesPage() {
 
   useEffect(() => {
     fetchPasses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

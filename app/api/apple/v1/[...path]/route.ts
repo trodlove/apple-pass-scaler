@@ -33,17 +33,13 @@ async function handleRequest(request: NextRequest, method: string) {
     // Expected: ['api', 'apple', 'v1', ...rest]
     const applePath = pathSegments.slice(3).join('/');
 
-    console.log(`📥 [Apple Web Service] ${method} ${applePath}`);
-
     // Authenticate the request
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('ApplePass ')) {
-      console.error(`❌ [Apple Web Service] Missing or invalid authorization header`);
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
     const authenticationToken = authHeader.substring('ApplePass '.length);
-    console.log(`🔑 [Apple Web Service] Auth token: ${authenticationToken.substring(0, 10)}...`);
 
     // Validate authentication token
     const { data: pass, error: authError } = await supabaseAdmin
@@ -53,11 +49,8 @@ async function handleRequest(request: NextRequest, method: string) {
       .single();
 
     if (authError || !pass) {
-      console.error(`❌ [Apple Web Service] Authentication failed:`, authError?.message || 'Pass not found');
       return new NextResponse('Unauthorized', { status: 401 });
     }
-
-    console.log(`✅ [Apple Web Service] Authenticated for pass ${pass.serial_number}`);
 
     // Route to appropriate handler based on path and method
     if (method === 'POST' && applePath.startsWith('devices/') && applePath.includes('/registrations/')) {
@@ -94,11 +87,8 @@ async function handleRegisterDevice(
     const deviceID = pathParts[1];
     const serialNumber = pathParts[4];
 
-    console.log(`📱 [Device Registration] Device ${deviceID} attempting to register for pass ${serialNumber}`);
-
     // Verify serial number matches
     if (pass.serial_number !== serialNumber) {
-      console.error(`❌ [Device Registration] Serial number mismatch: expected ${pass.serial_number}, got ${serialNumber}`);
       return new NextResponse('Forbidden', { status: 403 });
     }
 
@@ -107,11 +97,8 @@ async function handleRegisterDevice(
     const pushToken = body.trim();
 
     if (!pushToken) {
-      console.error(`❌ [Device Registration] No push token provided for device ${deviceID}`);
       return new NextResponse('Bad Request', { status: 400 });
     }
-
-    console.log(`✅ [Device Registration] Push token received: ${pushToken.substring(0, 20)}...`);
 
     // Find or create device
     let { data: device, error: deviceError } = await supabaseAdmin
@@ -158,11 +145,10 @@ async function handleRegisterDevice(
       });
 
     if (regError) {
-      console.error(`❌ [Device Registration] Error creating registration:`, regError);
+      console.error('Error creating registration:', regError);
       return new NextResponse('Internal Server Error', { status: 500 });
     }
 
-    console.log(`✅ [Device Registration] Successfully registered device ${deviceID} for pass ${serialNumber}`);
     return new NextResponse('', { status: 200 });
   } catch (error) {
     console.error('Error in handleRegisterDevice:', error);

@@ -47,7 +47,7 @@ export default function EditPassPage() {
 
   useEffect(() => {
     fetchPass();
-  }, [passId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [passId]);
 
   async function fetchPass() {
     try {
