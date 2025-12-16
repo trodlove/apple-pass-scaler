@@ -594,12 +594,65 @@ async function handleGetUpdatedPasses(
       }),
     }).catch(() => {});
 
+    // CRITICAL: If no passes found with passesUpdatedSince filter, but passesUpdatedSince was provided,
+    // it might be because the timestamp is too recent. Try returning all passes for this device as a fallback.
+    // This ensures iOS always gets the updated pass even if there's a timing issue.
+    if (serialNumbers.length === 0 && passesUpdatedSince) {
+      console.log('[GET /v1/devices/.../registrations] No passes found with filter, trying without filter as fallback');
+      
+      // Try query without passesUpdatedSince filter
+      const fallbackQuery = supabaseAdmin
+        .from('registrations')
+        .select('pass_id, passes!inner(serial_number, last_updated_at, apple_account_id)')
+        .eq('device_id', device.id)
+        .eq('passes.apple_account_id', account.id);
+      
+      const { data: fallbackRegistrations } = await fallbackQuery;
+      const fallbackSerialNumbers = fallbackRegistrations
+        ?.map((reg: any) => reg.passes?.serial_number)
+        .filter((sn: string) => sn) || [];
+      
+      if (fallbackSerialNumbers.length > 0) {
+        console.log('[GET /v1/devices/.../registrations] Fallback query found passes:', fallbackSerialNumbers);
+        await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: '[GET /v1/devices/.../registrations] Fallback query returned passes',
+            data: { deviceID, passTypeID, passesUpdatedSince, fallbackSerialNumbers },
+            level: 'info',
+          }),
+        }).catch(() => {});
+        return NextResponse.json(fallbackSerialNumbers, { status: 200 });
+      }
+    }
+
     if (serialNumbers.length === 0) {
       // Return empty array, not 204 - per Apple docs, should return [] not 204
+      console.log('[GET /v1/devices/.../registrations] Returning empty array - no passes found');
+      await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: '[GET /v1/devices/.../registrations] Returning empty array',
+          data: { deviceID, passTypeID, passesUpdatedSince, registrationsCount: registrations?.length || 0 },
+          level: 'warn',
+        }),
+      }).catch(() => {});
       return NextResponse.json([], { status: 200 });
     }
 
     // Return serial numbers as JSON array - per Apple docs format
+    console.log('[GET /v1/devices/.../registrations] Returning serial numbers:', serialNumbers);
+    await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: '[GET /v1/devices/.../registrations] Returning serial numbers',
+        data: { deviceID, passTypeID, passesUpdatedSince, serialNumbers, count: serialNumbers.length },
+        level: 'info',
+      }),
+    }).catch(() => {});
     return NextResponse.json(serialNumbers, { status: 200 });
   } catch (error) {
     console.error('Error in handleGetUpdatedPasses:', error);
