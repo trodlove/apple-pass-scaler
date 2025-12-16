@@ -70,12 +70,15 @@ export async function PUT(
       ...pass_data,
     };
 
-    // Update the pass in the database
+    // CRITICAL: Update both last_updated_at AND last_modified
+    // last_modified is used by iOS to determine which passes need updating
+    const updateTimestamp = new Date().toISOString();
     const { data: updatedPass, error: updateError } = await supabaseAdmin
       .from('passes')
       .update({
         pass_data: updatedPassData,
-        last_updated_at: new Date().toISOString(),
+        last_updated_at: updateTimestamp,
+        last_modified: updateTimestamp, // CRITICAL: iOS uses this to detect updates
       })
       .eq('id', params.id)
       .select()
@@ -111,9 +114,17 @@ export async function PUT(
             fields: {},
           };
 
+          // Ensure pass data includes required fields for regeneration
+          const passDataForRegeneration = {
+            ...updatedPassData,
+            serialNumber: existingPass.serial_number,
+            authenticationToken: existingPass.authentication_token,
+            webServiceURL: `${request.nextUrl.origin}/api/apple`,
+          };
+
           // Regenerate pass buffer (this would typically be saved to storage)
           await generatePassBuffer(
-            updatedPassData as any,
+            passDataForRegeneration as any,
             templateData,
             appleCredentials
           );

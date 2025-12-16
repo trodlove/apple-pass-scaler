@@ -652,7 +652,7 @@ export default function EditPassPage() {
                     onChange={(e) => setFormData({ ...formData, customerServiceLink: e.target.value })}
                     placeholder="https://example.com/support"
                   />
-                  <p className="text-xs text-gray-500">Link that appears as "Get Help" on the back of the pass.</p>
+                  <p className="text-xs text-gray-500">Link that appears as &quot;Get Help&quot; on the back of the pass.</p>
                 </div>
 
                 {/* Notification Message */}
