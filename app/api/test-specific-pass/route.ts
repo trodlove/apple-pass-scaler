@@ -164,11 +164,33 @@ export async function POST(request: NextRequest) {
       wwdr_cert: account.wwdr_cert,
     };
 
+    // Log before sending
+    await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: '[Test Specific Pass] About to send push notifications',
+        data: { serialNumber: pass.serial_number, pushTokenCount: pushTokens.length, testMessage },
+        level: 'info',
+      }),
+    }).catch(() => {});
+
     // Send push notifications
     const result = await sendSilentPushToMultiple(pushTokens, credentials);
     const success = result.success;
     const failed = result.failed;
     const errorDetails = result.errors || [];
+    
+    // Log after sending
+    await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: '[Test Specific Pass] Push notifications sent',
+        data: { serialNumber: pass.serial_number, success, failed, errors: errorDetails, testMessage },
+        level: success > 0 ? 'info' : 'error',
+      }),
+    }).catch(() => {});
 
     // Get detailed error info from console logs if available
     // The actual error will be in Vercel logs, but we can return what we know
