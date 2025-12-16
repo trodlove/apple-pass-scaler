@@ -19,99 +19,138 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
   const [imageError, setImageError] = useState(false);
 
   // Get colors with defaults
-  const backgroundColor = passData?.backgroundColor || '#000000';
-  const foregroundColor = passData?.foregroundColor || '#FFFFFF';
-  const labelColor = passData?.labelColor || '#CCCCCC';
+  const backgroundColor = passData?.backgroundColor || '#B5A094';
+  const foregroundColor = passData?.foregroundColor || '#000000';
+  const labelColor = passData?.labelColor || '#666666';
   
   // Get image URLs (prefer @2x, fallback to @1x, then old format)
-  const logoUrl = passData?.logo_2x_url || passData?.logo_1x_url || passData?.logo || '';
   const iconUrl = passData?.icon_2x_url || passData?.icon_1x_url || passData?.icon || '';
-  const stripUrl = passData?.strip_2x_url || passData?.strip_1x_url || passData?.stripImage || '';
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      {/* Pass Preview */}
+      {/* Pass Preview - matches iOS Wallet exactly */}
       <div
-        className="relative"
+        className="relative rounded-t-lg overflow-hidden"
         style={{
           backgroundColor,
           color: foregroundColor,
-          minHeight: '200px',
+          aspectRatio: '0.65',
         }}
       >
-        {/* Logo */}
-        {logoUrl && !imageError && (
-          <div className="absolute top-4 left-4">
-            <img
-              src={logoUrl}
-              alt="Logo"
-              className="h-8 w-auto"
-              style={{ maxWidth: '120px' }}
-              onError={() => setImageError(true)}
-            />
+        {/* === TOP HEADER ROW === */}
+        <div className="flex items-start justify-between px-3 pt-3">
+          {/* Left: Icon + Logo Text */}
+          <div className="flex items-center gap-1.5">
+            {iconUrl && !imageError ? (
+              <img
+                src={iconUrl}
+                alt="Icon"
+                className="w-8 h-8 rounded-md object-cover"
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <div 
+                className="w-8 h-8 rounded-md flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
+              >
+                <div className="w-4 h-5 bg-black/60 rounded-sm" />
+              </div>
+            )}
+            <span 
+              className="text-sm font-medium"
+              style={{ color: foregroundColor }}
+            >
+              {passData?.logoText || 'Logo'}
+            </span>
           </div>
-        )}
-        
-        {/* Icon (for notification) */}
-        {iconUrl && !imageError && (
-          <div className="absolute top-4 left-4" style={{ marginTop: logoUrl ? '40px' : '0' }}>
-            <img
-              src={iconUrl}
-              alt="Icon"
-              className="w-10 h-10 rounded"
-              onError={() => setImageError(true)}
-            />
-          </div>
-        )}
 
-        {/* Header Fields */}
-        <div className="absolute top-4 right-4 text-right">
-          {passData?.headerLabel && (
-            <div className="text-xs opacity-80 mb-1" style={{ color: labelColor }}>
-              {passData.headerLabel}
+          {/* Right: Header Field */}
+          <div className="text-right">
+            <div 
+              className="text-[8px] uppercase tracking-wide"
+              style={{ color: labelColor }}
+            >
+              {passData?.headerLabel || 'HEADER'}
             </div>
-          )}
-          {passData?.headerValue && (
-            <div className="text-lg font-bold">{passData.headerValue}</div>
-          )}
+            <div 
+              className="text-sm font-semibold -mt-0.5"
+              style={{ color: foregroundColor }}
+            >
+              {passData?.headerValue || 'value'}
+            </div>
+          </div>
         </div>
 
-        {/* Strip Image */}
-        {stripUrl && (
-          <div className="absolute top-20 left-0 right-0 h-32">
-            <img
-              src={stripUrl}
-              alt="Strip"
-              className="w-full h-full object-cover"
-            />
+        {/* === PRIMARY FIELD === */}
+        <div className="px-3 mt-2">
+          <div 
+            className="text-[8px] uppercase tracking-wide"
+            style={{ color: labelColor }}
+          >
+            {passData?.primaryLabel || 'WELCOME'}
           </div>
-        )}
-
-        {/* Secondary Fields */}
-        <div className="absolute bottom-16 left-4 right-4 grid grid-cols-2 gap-4">
-          {passData?.secondaryLeftLabel && (
-            <div>
-              <div className="text-xs opacity-80 mb-1" style={{ color: labelColor }}>
-                {passData.secondaryLeftLabel}
-              </div>
-              <div className="font-semibold">{passData.secondaryLeftValue || ''}</div>
-            </div>
-          )}
-          {passData?.secondaryRightLabel && (
-            <div>
-              <div className="text-xs opacity-80 mb-1" style={{ color: labelColor }}>
-                {passData.secondaryRightLabel}
-              </div>
-              <div className="font-semibold">{passData.secondaryRightValue || ''}</div>
-            </div>
-          )}
+          <div 
+            className="text-lg font-semibold leading-tight"
+            style={{ color: foregroundColor }}
+          >
+            {passData?.primaryValue || passData?.organizationName || 'Apple Pass Scaler'}
+          </div>
         </div>
 
-        {/* QR Code Placeholder */}
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-          <div className="bg-white/20 rounded p-2">
-            <div className="w-16 h-16 bg-white/30 rounded flex items-center justify-center">
-              <div className="text-xs opacity-60">QR</div>
+        {/* === SECONDARY FIELDS === */}
+        <div className="flex justify-between px-3 mt-3">
+          <div>
+            <div 
+              className="text-[8px] uppercase tracking-wide"
+              style={{ color: labelColor }}
+            >
+              {passData?.secondaryLeftLabel || 'LEFT'}
+            </div>
+            <div 
+              className="text-sm font-medium"
+              style={{ color: foregroundColor }}
+            >
+              {passData?.secondaryLeftValue || 'value'}
+            </div>
+          </div>
+          <div className="text-right">
+            <div 
+              className="text-[8px] uppercase tracking-wide"
+              style={{ color: labelColor }}
+            >
+              {passData?.secondaryRightLabel || 'RIGHT'}
+            </div>
+            <div 
+              className="text-sm font-medium"
+              style={{ color: foregroundColor }}
+            >
+              {passData?.secondaryRightValue || 'value'}
+            </div>
+          </div>
+        </div>
+
+        {/* === QR CODE === */}
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
+          <div className="bg-white rounded-lg p-2 shadow">
+            <div className="w-14 h-14 flex items-center justify-center">
+              <svg viewBox="0 0 100 100" className="w-full h-full">
+                <rect x="0" y="0" width="100" height="100" fill="white"/>
+                <rect x="5" y="5" width="25" height="25" fill="black"/>
+                <rect x="10" y="10" width="15" height="15" fill="white"/>
+                <rect x="13" y="13" width="9" height="9" fill="black"/>
+                <rect x="70" y="5" width="25" height="25" fill="black"/>
+                <rect x="75" y="10" width="15" height="15" fill="white"/>
+                <rect x="78" y="13" width="9" height="9" fill="black"/>
+                <rect x="5" y="70" width="25" height="25" fill="black"/>
+                <rect x="10" y="75" width="15" height="15" fill="white"/>
+                <rect x="13" y="78" width="9" height="9" fill="black"/>
+                <rect x="38" y="8" width="5" height="5" fill="black"/>
+                <rect x="48" y="8" width="5" height="5" fill="black"/>
+                <rect x="38" y="38" width="5" height="5" fill="black"/>
+                <rect x="48" y="43" width="5" height="5" fill="black"/>
+                <rect x="78" y="78" width="5" height="5" fill="black"/>
+                <rect x="88" y="88" width="5" height="5" fill="black"/>
+              </svg>
             </div>
           </div>
         </div>
@@ -120,36 +159,36 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
       {/* Pass Info */}
       <div className="p-4 space-y-2">
         <div className="font-semibold text-gray-900">
-          {passData?.organizationName || 'Untitled Pass'}
+          {passData?.organizationName || 'Apple Pass Scaler'}
         </div>
-        <div className="text-sm text-gray-600">
-          {passData?.description || passData?.organizationName || 'No description'}
+        <div className="text-sm text-gray-500 truncate">
+          {pass.serial_number}
         </div>
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 pt-2">
           {onShare && (
-            <Button variant="outline" size="sm" onClick={onShare}>
+            <Button variant="outline" size="sm" onClick={onShare} title="Share">
               <Share2 className="h-4 w-4" />
             </Button>
           )}
           {onNotify && (
-            <Button variant="outline" size="sm" onClick={onNotify}>
+            <Button variant="outline" size="sm" onClick={onNotify} title="Send Notification">
               <Bell className="h-4 w-4" />
             </Button>
           )}
           {onEdit && (
-            <Button variant="outline" size="sm" onClick={onEdit}>
+            <Button variant="outline" size="sm" onClick={onEdit} title="Edit">
               <Edit className="h-4 w-4" />
             </Button>
           )}
           {onDownload && (
-            <Button variant="outline" size="sm" onClick={onDownload}>
+            <Button variant="outline" size="sm" onClick={onDownload} title="Download">
               <Download className="h-4 w-4" />
             </Button>
           )}
           {onDelete && (
-            <Button variant="outline" size="sm" onClick={onDelete} className="text-red-600 hover:text-red-700">
+            <Button variant="outline" size="sm" onClick={onDelete} className="text-red-600 hover:text-red-700" title="Delete">
               <Trash2 className="h-4 w-4" />
             </Button>
           )}
@@ -158,4 +197,3 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
     </div>
   );
 }
-

@@ -18,6 +18,8 @@ interface PassEditorState {
   logoText: string;
   headerLabel: string;
   headerValue: string;
+  primaryLabel: string;
+  primaryValue: string;
   backgroundColor: string;
   foregroundColor: string;
   labelColor: string;
@@ -65,6 +67,8 @@ const initialState = {
   logoText: '',
   headerLabel: '',
   headerValue: '',
+  primaryLabel: '',
+  primaryValue: '',
   backgroundColor: '#000000',
   foregroundColor: '#FFFFFF',
   labelColor: '#CCCCCC',
@@ -115,6 +119,8 @@ export const usePassEditorStore = create<PassEditorState>((set) => ({
       logoText: passData.logoText || '',
       headerLabel: passData.headerLabel || '',
       headerValue: passData.headerValue || '',
+      primaryLabel: passData.primaryLabel || 'WELCOME',
+      primaryValue: passData.primaryValue || passData.organizationName || '',
       backgroundColor: passData.backgroundColor || '#000000',
       foregroundColor: passData.foregroundColor || '#FFFFFF',
       labelColor: passData.labelColor || '#CCCCCC',

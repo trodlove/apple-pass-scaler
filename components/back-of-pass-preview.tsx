@@ -4,79 +4,101 @@ import { usePassEditorStore } from '@/stores/pass-editor-store';
 
 export function BackOfPassPreview() {
   const passData = usePassEditorStore();
+  const iconUrl = passData.icon_2x_url || passData.icon_1x_url || '';
 
   return (
-    <div className="bg-white border rounded-lg p-6 shadow-sm">
-      <h3 className="font-semibold text-lg mb-4 text-gray-900">Back of Pass Preview</h3>
-      
-      <div className="space-y-4">
-        {/* Latest News */}
-        {passData.latestNewsText && (
-          <div className="border-b pb-3">
-            <div className="text-sm font-medium text-gray-700 mb-1">Latest News</div>
-            <div className="text-sm text-gray-600">
-              {passData.latestNewsLink ? (
-                <a href={passData.latestNewsLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                  {passData.latestNewsText}
-                </a>
-              ) : (
-                <span>{passData.latestNewsText}</span>
-              )}
+    <div className="w-[290px] mx-auto">
+      {/* iOS Pass Back Container - Dark Mode Style */}
+      <div className="bg-[#1C1C1E] rounded-2xl overflow-hidden text-white">
+        {/* Mini Pass Preview at Top */}
+        <div className="flex justify-center pt-6 pb-4">
+          <div 
+            className="w-24 h-16 rounded-lg shadow-lg overflow-hidden"
+            style={{ backgroundColor: passData.backgroundColor || '#B5A094' }}
+          >
+            <div className="p-1.5 h-full flex flex-col justify-between">
+              <div className="flex items-center gap-1">
+                {iconUrl ? (
+                  <img src={iconUrl} alt="" className="w-3 h-3 rounded-sm" />
+                ) : (
+                  <div className="w-3 h-3 bg-black/30 rounded-sm" />
+                )}
+                <span className="text-[5px] text-black/80 truncate">{passData.logoText || 'Logo'}</span>
+              </div>
+              <div className="text-[6px] text-black/80">{passData.organizationName || 'Apple Pass Scaler'}</div>
+              <div className="flex justify-between text-[4px] text-black/60">
+                <span>{passData.secondaryLeftValue || 'value'}</span>
+                <span>{passData.secondaryRightValue || 'value'}</span>
+              </div>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Make Money Link */}
-        {passData.makeMoneyLink && (
-          <div className="border-b pb-3">
-            <a href={passData.makeMoneyLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">
-              Make Money
-            </a>
-          </div>
-        )}
+        {/* Pass Title */}
+        <div className="text-center pb-1">
+          <h3 className="text-xl font-semibold">Wallet Pass</h3>
+          <p className="text-sm text-gray-400">Updated 1 minute ago</p>
+        </div>
 
-        {/* Redeem Cash Link */}
-        {passData.redeemCashLink && (
-          <div className="border-b pb-3">
-            <a href={passData.redeemCashLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">
-              Redeem Earnings
-            </a>
+        {/* Toggles Section */}
+        <div className="mx-4 mt-4 bg-[#2C2C2E] rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700/50">
+            <span className="text-base">Automatic Updates</span>
+            <div className="w-12 h-7 bg-green-500 rounded-full relative">
+              <div className="absolute right-1 top-1 w-5 h-5 bg-white rounded-full shadow" />
+            </div>
           </div>
-        )}
+          <div className="flex items-center justify-between px-4 py-3">
+            <span className="text-base">Allow Notifications</span>
+            <div className="w-12 h-7 bg-green-500 rounded-full relative">
+              <div className="absolute right-1 top-1 w-5 h-5 bg-white rounded-full shadow" />
+            </div>
+          </div>
+        </div>
 
-        {/* Share and Earn Link */}
-        {passData.shareEarnLink && (
-          <div className="border-b pb-3">
-            <a href={passData.shareEarnLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">
-              Pass the Gravy
-            </a>
+        {/* Fields Section */}
+        <div className="mx-4 mt-4 mb-6 bg-[#2C2C2E] rounded-xl overflow-hidden">
+          {/* Latest News */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700/50">
+            <span className="text-base text-gray-300">Latest news:</span>
+            <span className="text-base text-blue-500">
+              {passData.latestNewsText || 'testes'}
+            </span>
           </div>
-        )}
 
-        {/* Last Update / Notification Message */}
-        {passData.notificationMessage && (
-          <div className="border-b pb-3">
-            <div className="text-sm font-medium text-gray-700 mb-1">Last Update</div>
-            <div className="text-sm text-gray-600">{passData.notificationMessage}</div>
+          {/* Make Money */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700/50">
+            <span className="text-base text-gray-300">Make more money:</span>
+            <span className="text-base text-blue-500">Make Money</span>
           </div>
-        )}
 
-        {/* Customer Service Link */}
-        {passData.customerServiceLink && (
-          <div>
-            <a href={passData.customerServiceLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">
-              Get Help
-            </a>
+          {/* Redeem Cash */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700/50">
+            <span className="text-base text-gray-300">Redeem your cash:</span>
+            <span className="text-base text-blue-500">Redeem Earnings</span>
           </div>
-        )}
 
-        {!passData.latestNewsText && !passData.makeMoneyLink && !passData.redeemCashLink && !passData.shareEarnLink && !passData.notificationMessage && !passData.customerServiceLink && (
-          <div className="text-sm text-gray-500 text-center py-4">
-            No back fields configured yet
+          {/* Share and Earn */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700/50">
+            <span className="text-base text-gray-300">Share and earn:</span>
+            <span className="text-base text-blue-500">Pass the Gravy</span>
           </div>
-        )}
+
+          {/* Last Update */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700/50">
+            <span className="text-base text-gray-300">Last Update:</span>
+            <span className="text-base text-gray-100">
+              {passData.notificationMessage || 'Check this new offer out!'}
+            </span>
+          </div>
+
+          {/* Customer Service */}
+          <div className="flex items-center justify-between px-4 py-3">
+            <span className="text-base text-gray-300">Customer service:</span>
+            <span className="text-base text-blue-500">Get Help</span>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-

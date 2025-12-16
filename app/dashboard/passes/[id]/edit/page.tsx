@@ -267,15 +267,15 @@ export default function EditPassPage() {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="headerLabel">Header Field Label</Label>
+                    <Label htmlFor="headerLabel">Header Field Label (Top Right)</Label>
                     <Input
                       id="headerLabel"
                       value={store.headerLabel}
                       onChange={(e) => store.setPassProperty('headerLabel', e.target.value)}
-                      placeholder="MEMBER"
+                      placeholder="GJKGK"
                       maxLength={25}
                     />
-                    <p className="text-xs text-gray-500">Header label text.</p>
+                    <p className="text-xs text-gray-500">Small label in top-right corner.</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="headerValue">Header Field Value</Label>
@@ -283,10 +283,35 @@ export default function EditPassPage() {
                       id="headerValue"
                       value={store.headerValue}
                       onChange={(e) => store.setPassProperty('headerValue', e.target.value)}
-                      placeholder="GOLD MEMBER"
+                      placeholder="yrtey"
                       maxLength={30}
                     />
-                    <p className="text-xs text-gray-500">Header value text.</p>
+                    <p className="text-xs text-gray-500">Value below the header label.</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="primaryLabel">Primary Field Label</Label>
+                    <Input
+                      id="primaryLabel"
+                      value={store.primaryLabel}
+                      onChange={(e) => store.setPassProperty('primaryLabel', e.target.value)}
+                      placeholder="WELCOME"
+                      maxLength={25}
+                    />
+                    <p className="text-xs text-gray-500">Large label below header (e.g., WELCOME).</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="primaryValue">Primary Field Value</Label>
+                    <Input
+                      id="primaryValue"
+                      value={store.primaryValue}
+                      onChange={(e) => store.setPassProperty('primaryValue', e.target.value)}
+                      placeholder="Apple Pass Scaler"
+                      maxLength={50}
+                    />
+                    <p className="text-xs text-gray-500">Large text below primary label.</p>
                   </div>
                 </div>
 
