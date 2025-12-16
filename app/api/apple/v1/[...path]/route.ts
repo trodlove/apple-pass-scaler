@@ -284,8 +284,9 @@ async function handleGetPass(
         };
 
     // Update webServiceURL in pass data
-    // CRITICAL: Include notificationMessage from pass_data so updated pass has the new value
-    // This is what triggers the notification when iOS compares old vs new pass
+    // CRITICAL: Include notificationMessage and all backFields configuration from pass_data
+    // This ensures all backFields (including links) are preserved when regenerating the pass
+    // The notificationMessage triggers the notification when iOS compares old vs new pass
     const passData = {
       ...pass.pass_data,
       serialNumber: pass.serial_number,
@@ -293,6 +294,13 @@ async function handleGetPass(
       webServiceURL: `${request.nextUrl.origin}/api/apple`,
       // Ensure notificationMessage is included if it exists in pass_data
       notificationMessage: pass.pass_data?.notificationMessage || pass.pass_data?.broadcastMessage || 'Welcome! Check back for updates.',
+      // Preserve all backFields configuration (links, etc.)
+      latestNewsText: pass.pass_data?.latestNewsText,
+      latestNewsLink: pass.pass_data?.latestNewsLink,
+      makeMoneyLink: pass.pass_data?.makeMoneyLink,
+      redeemCashLink: pass.pass_data?.redeemCashLink,
+      shareEarnLink: pass.pass_data?.shareEarnLink,
+      customerServiceLink: pass.pass_data?.customerServiceLink,
     };
 
     // Log for debugging - this endpoint is called when device fetches updated pass after silent push

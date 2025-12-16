@@ -129,44 +129,134 @@ export async function generatePassBuffer(
       });
     }
 
-    // Add backFields with notification field (CRITICAL for push notifications)
+    // Add backFields with rich content and notification field (CRITICAL for push notifications)
     // This field must have changeMessage property for notifications to work
     // Per Apple docs: notifications only appear when a field with changeMessage is updated
     if (!passJson.backFields) {
       passJson.backFields = [];
     }
     
-    // Add or update notification field
-    // CRITICAL: This field MUST have changeMessage for notifications to work
+    // Clear existing backFields to rebuild with proper structure
+    passJson.backFields = [];
+    
+    // Add "Latest news" field with link support
+    if (passData.latestNewsText || passData.latestNewsLink) {
+      const latestNewsField: any = {
+        key: 'latestNews',
+        label: 'Latest news:',
+        value: passData.latestNewsText || 'Unlock bonuses up to 2X your earnings! Find your new daily bonus here.',
+      };
+      
+      if (passData.latestNewsLink) {
+        latestNewsField.attributedValue = `<a href='${passData.latestNewsLink}'>${passData.latestNewsText || 'here'}</a>`;
+      }
+      
+      passJson.backFields.push(latestNewsField);
+    } else {
+      // Default latest news field
+      passJson.backFields.push({
+        key: 'latestNews',
+        label: 'Latest news:',
+        value: 'Unlock bonuses up to 2X your earnings! Find your new daily bonus for Tuesday here.',
+        attributedValue: '<a href=\'https://example.com/latest-news\'>here</a>',
+      });
+    }
+    
+    // Add "Make more money" field with link
+    if (passData.makeMoneyLink) {
+      passJson.backFields.push({
+        key: 'makeMoney',
+        label: 'Make more money:',
+        value: 'Make Money',
+        attributedValue: `<a href='${passData.makeMoneyLink}'>Make Money</a>`,
+      });
+    } else {
+      passJson.backFields.push({
+        key: 'makeMoney',
+        label: 'Make more money:',
+        value: 'Make Money',
+        attributedValue: '<a href=\'https://example.com/make-money\'>Make Money</a>',
+      });
+    }
+    
+    // Add "Redeem your cash" field with link
+    if (passData.redeemCashLink) {
+      passJson.backFields.push({
+        key: 'redeemCash',
+        label: 'Redeem your cash:',
+        value: 'Redeem Earnings',
+        attributedValue: `<a href='${passData.redeemCashLink}'>Redeem Earnings</a>`,
+      });
+    } else {
+      passJson.backFields.push({
+        key: 'redeemCash',
+        label: 'Redeem your cash:',
+        value: 'Redeem Earnings',
+        attributedValue: '<a href=\'https://example.com/redeem\'>Redeem Earnings</a>',
+      });
+    }
+    
+    // Add "Share and earn" field with link
+    if (passData.shareEarnLink) {
+      passJson.backFields.push({
+        key: 'shareEarn',
+        label: 'Share and earn:',
+        value: 'Pass the Gravy',
+        attributedValue: `<a href='${passData.shareEarnLink}'>Pass the Gravy</a>`,
+      });
+    } else {
+      passJson.backFields.push({
+        key: 'shareEarn',
+        label: 'Share and earn:',
+        value: 'Pass the Gravy',
+        attributedValue: '<a href=\'https://example.com/share\'>Pass the Gravy</a>',
+      });
+    }
+    
+    // Add "Last Update" field (the notification field) - CRITICAL for push notifications
+    // This field MUST have changeMessage for notifications to work
     // Per Apple docs: notifications only appear when a field with changeMessage is updated
-    const notificationFieldIndex = passJson.backFields.findIndex((f: any) => f.key === 'notificationField');
     const notificationMessage = passData.notificationMessage || passData.broadcastMessage || 'Welcome! Check back for updates.';
     
-    // Always add/update the notification field - it must be present for notifications to work
+    // CRITICAL: changeMessage must be a proper message format with %@ placeholder
+    // The %@ will be replaced by iOS with the new field value when displaying the notification
+    // Example: If value changes to "Your bonus is ready!", notification shows "New update: Your bonus is ready!"
     const notificationField = {
-      key: 'notificationField',
-      label: 'Last Message',
+      key: 'lastUpdate',
+      label: 'Last Update:',
       value: notificationMessage,
-      changeMessage: '%@', // CRITICAL: This is what triggers the notification when the value changes
-      // The %@ placeholder will be replaced with the new value when iOS displays the notification
+      changeMessage: 'New update: %@', // CRITICAL: Proper message format - %@ gets replaced with new value
     };
     
-    if (notificationFieldIndex >= 0) {
-      // Update existing field - ensure value actually changes to trigger notification
-      passJson.backFields[notificationFieldIndex] = notificationField;
+    passJson.backFields.push(notificationField);
+    
+    // Add "Customer service" field with link
+    if (passData.customerServiceLink) {
+      passJson.backFields.push({
+        key: 'customerService',
+        label: 'Customer service:',
+        value: 'Get Help',
+        attributedValue: `<a href='${passData.customerServiceLink}'>Get Help</a>`,
+      });
     } else {
-      // Add new field
-      passJson.backFields.push(notificationField);
+      passJson.backFields.push({
+        key: 'customerService',
+        label: 'Customer service:',
+        value: 'Get Help',
+        attributedValue: '<a href=\'https://example.com/help\'>Get Help</a>',
+      });
     }
     
     // Log for debugging
-    console.log('[Pass Generation] Notification field:', {
-      key: notificationField.key,
-      label: notificationField.label,
-      value: notificationMessage.substring(0, 50),
-      hasChangeMessage: !!notificationField.changeMessage,
+    console.log('[Pass Generation] BackFields created:', {
       backFieldsCount: passJson.backFields.length,
-      allBackFields: passJson.backFields.map((f: any) => ({ key: f.key, label: f.label })),
+      allBackFields: passJson.backFields.map((f: any) => ({ key: f.key, label: f.label, hasAttributedValue: !!f.attributedValue })),
+      notificationField: {
+        key: notificationField.key,
+        label: notificationField.label,
+        value: notificationMessage.substring(0, 50),
+        changeMessage: notificationField.changeMessage,
+      },
     });
 
     // Add website URL if provided

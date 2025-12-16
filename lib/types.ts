@@ -111,6 +111,16 @@ export interface AppleCredentials {
 // Pass generation types
 export interface PassData {
   [key: string]: any;
+  // BackFields configuration
+  latestNewsText?: string;
+  latestNewsLink?: string;
+  makeMoneyLink?: string;
+  redeemCashLink?: string;
+  shareEarnLink?: string;
+  customerServiceLink?: string;
+  // Notification field
+  notificationMessage?: string;
+  broadcastMessage?: string;
 }
 
 export interface TemplateData {
