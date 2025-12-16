@@ -25,29 +25,38 @@ export async function sendSilentPush(
 
     // Prepare APNs auth key
     // Per the guide: key should be stored as base64, then decoded: Buffer.from(key, "base64").toString("ascii")
-    // We store as PEM in database, so use it directly as string
-    // CRITICAL: Use key exactly as stored - don't modify it
-    let keyValue: string;
+    // We store as PEM in database
+    // CRITICAL: The key must be valid PEM format with proper newlines
+    let keyValue: string = appleCredentials.apns_auth_key;
     
-    // Check if key is base64 (no BEGIN/END markers)
-    if (!appleCredentials.apns_auth_key.includes('BEGIN') && !appleCredentials.apns_auth_key.includes('END')) {
-      // It's base64 - decode it per guide: Buffer.from(key, "base64").toString("ascii")
+    // Ensure key is properly formatted PEM
+    // Remove any leading/trailing whitespace but preserve internal structure
+    keyValue = keyValue.trim();
+    
+    // If it's PEM format, ensure it has proper line endings
+    if (keyValue.includes('BEGIN') && keyValue.includes('END')) {
+      // Normalize line endings to \n (Unix style)
+      keyValue = keyValue.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      // Ensure it ends with a newline (PEM format requirement)
+      if (!keyValue.endsWith('\n')) {
+        keyValue += '\n';
+      }
+      console.log('[APNs] Using PEM key (normalized line endings)');
+    } else {
+      // Might be base64 - decode it per guide: Buffer.from(key, "base64").toString("ascii")
       try {
-        keyValue = Buffer.from(appleCredentials.apns_auth_key, 'base64').toString('ascii');
+        keyValue = Buffer.from(keyValue, 'base64').toString('ascii');
         console.log('[APNs] Decoded key from base64 to PEM string');
       } catch (e) {
-        // Not valid base64, use as-is
-        keyValue = appleCredentials.apns_auth_key;
         console.log('[APNs] Key is not base64, using as-is');
       }
-    } else {
-      // It's PEM format - use directly as string (exactly as stored, no modifications)
-      keyValue = appleCredentials.apns_auth_key;
-      console.log('[APNs] Using PEM key as string (exactly as stored)');
     }
     
     console.log('[APNs] Key ID:', appleCredentials.apns_key_id);
     console.log('[APNs] Team ID:', appleCredentials.team_id);
+    console.log('[APNs] Key length:', keyValue.length);
+    console.log('[APNs] Key starts with:', keyValue.substring(0, 30));
+    console.log('[APNs] Key ends with:', keyValue.substring(keyValue.length - 30));
     
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:20',message:'Auth key prepared',data:{keyLength:appleCredentials.apns_auth_key.length,keyType:typeof keyValue,keyValueLength:String(keyValue).length,hasBegin:appleCredentials.apns_auth_key.includes('BEGIN'),hasEnd:appleCredentials.apns_auth_key.includes('END')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
