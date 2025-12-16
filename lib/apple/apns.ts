@@ -86,12 +86,14 @@ export async function sendSilentPush(
     const provider = new apn.Provider(options);
 
     // Create notification for Wallet pass update
-    // Per the guide: payload must be empty, topic must be Pass Type ID
+    // Per the guide: payload must be empty, topic must be Pass Type ID, pushType must be "background"
     const notification = new apn.Notification();
     notification.payload = {}; // CRITICAL: Empty payload for Wallet updates
     notification.topic = appleCredentials.pass_type_id; // CRITICAL: Must be Pass Type ID, not Bundle ID
     notification.priority = 5; // Per guide: should be 5, not 10
     notification.contentAvailable = true; // Silent push notification (background update)
+    // Per guide: pushType should be "background" - use type assertion since TypeScript types may be incomplete
+    (notification as any).pushType = 'background'; // CRITICAL: Tells iOS this is a background update
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:40',message:'Notification prepared',data:{topic:notification.topic,payload:JSON.stringify(notification.payload),priority:notification.priority,contentAvailable:notification.contentAvailable},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
     // #endregion
