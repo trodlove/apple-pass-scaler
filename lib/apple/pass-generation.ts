@@ -22,6 +22,9 @@ export async function generatePassBuffer(
     const passStyle = templateData.pass_style || 'generic';
     
     // Base pass.json structure
+    // CRITICAL: Add lastModified timestamp so iOS can detect when pass was updated
+    // iOS uses this to determine if it needs to fetch the pass
+    const lastModified = new Date().toISOString();
     const passJson: any = {
       formatVersion: 1,
       passTypeIdentifier: appleCredentials.pass_type_id,
@@ -31,6 +34,9 @@ export async function generatePassBuffer(
       serialNumber: passData.serialNumber || generateSerialNumber(),
       backgroundColor: passData.backgroundColor || 'rgb(255, 255, 255)',
       foregroundColor: passData.foregroundColor || 'rgb(0, 0, 0)',
+      // Add lastModified so iOS can detect pass updates
+      // This is critical for iOS to know when to fetch the updated pass
+      lastModified: lastModified,
     };
 
     // Add labelColor if provided
@@ -169,7 +175,11 @@ export async function generatePassBuffer(
 
     // Regenerate pass.json with updated fields (after adding headerFields, secondaryFields, etc.)
     // This ensures the JSON structure is complete before creating buffers
+    // CRITICAL: Ensure lastModified is included so iOS can detect pass updates
     const finalPassJson = JSON.parse(JSON.stringify(passJson));
+    if (!finalPassJson.lastModified) {
+      finalPassJson.lastModified = new Date().toISOString();
+    }
 
     // Create buffers object for passkit-generator
     const buffers: Record<string, Buffer> = {
@@ -225,6 +235,7 @@ export async function generatePassBuffer(
     // For now, we assume no passphrase is needed, so we omit it entirely
 
     // Create the pass from scratch using constructor
+    // The pass.json buffer already includes lastModified from finalPassJson above
     const pass = new PKPass(
       buffers,
       certificates,
