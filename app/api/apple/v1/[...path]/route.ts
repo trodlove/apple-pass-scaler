@@ -46,14 +46,16 @@ async function handleRequest(request: NextRequest, method: string) {
     // Check if this is the GET /v1/devices/{deviceID}/registrations/{passTypeID} endpoint
     // Path format: devices/{deviceID}/registrations/{passTypeID}
     const pathParts = applePath.split('/').filter(p => p.length > 0); // Filter empty strings
+    
+    // SIMPLIFIED: Check if this matches the pattern exactly
+    // Pattern: devices/{deviceID}/registrations/{passTypeID}
     const isGetUpdatedPassesList = method === 'GET' && 
       pathParts.length === 4 && 
       pathParts[0] === 'devices' && 
-      pathParts[2] === 'registrations' &&
-      !pathParts[3].includes('/'); // Ensure passTypeID doesn't contain slashes (not a serial number)
+      pathParts[2] === 'registrations';
 
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:50',message:'Path analysis',data:{pathParts,pathPartsLength:pathParts.length,isGet:method==='GET',isDevices:pathParts[0]==='devices',isRegistrations:pathParts[2]==='registrations',isGetUpdatedPassesList},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:50',message:'Path analysis',data:{pathParts,pathPartsLength:pathParts.length,isGet:method==='GET',isDevices:pathParts[0]==='devices',isRegistrations:pathParts[2]==='registrations',isGetUpdatedPassesList,applePath},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
     
     // CRITICAL DEBUG: Log path parsing details to console (visible in Vercel logs)
@@ -63,12 +65,15 @@ async function handleRequest(request: NextRequest, method: string) {
       pathParts,
       pathPartsLength: pathParts.length,
       pathParts0: pathParts[0],
+      pathParts1: pathParts[1],
       pathParts2: pathParts[2],
+      pathParts3: pathParts[3],
       isGet: method === 'GET',
       isDevices: pathParts[0] === 'devices',
       isRegistrations: pathParts[2] === 'registrations',
       isGetUpdatedPassesList,
-    }));
+      fullPathname: request.nextUrl.pathname,
+    }, null, 2));
 
     let pass: any = null;
 
@@ -76,15 +81,16 @@ async function handleRequest(request: NextRequest, method: string) {
     if (!isGetUpdatedPassesList) {
       console.log(`[DEBUG] AUTH REQUIRED - isGetUpdatedPassesList=false for path: ${applePath}`);
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:57',message:'Auth required - checking header',data:{applePath},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:57',message:'Auth required - checking header',data:{applePath,isGetUpdatedPassesList},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
       // Authenticate the request
       const authHeader = request.headers.get('authorization');
       if (!authHeader || !authHeader.startsWith('ApplePass ')) {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:60',message:'401 - Missing auth header',data:{applePath,hasAuthHeader:!!authHeader,authHeaderPreview:authHeader?.substring(0,20)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:60',message:'401 - Missing auth header',data:{applePath,hasAuthHeader:!!authHeader,authHeaderPreview:authHeader?.substring(0,20),isGetUpdatedPassesList},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
         // #endregion
         console.log(`[Apple Web Service] Missing or invalid Authorization header for ${applePath}`);
+        console.log(`[Apple Web Service] isGetUpdatedPassesList was: ${isGetUpdatedPassesList}, method: ${method}, pathParts: ${JSON.stringify(pathParts)}`);
         return new NextResponse('Unauthorized', { status: 401 });
       }
 
