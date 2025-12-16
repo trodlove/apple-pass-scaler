@@ -735,16 +735,33 @@ async function handleGetUpdatedPasses(
     }
 
     // Return serial numbers as JSON array - per Apple docs format
+    // CRITICAL: iOS should then call GET /v1/passes/{passTypeID}/{serialNumber} for each serial number
+    // If iOS doesn't call GET /v1/passes, it means iOS thinks it already has the latest version
     console.log('[GET /v1/devices/.../registrations] Returning serial numbers:', serialNumbers);
+    console.log('[GET /v1/devices/.../registrations] iOS should now call GET /v1/passes for each serial number');
+    console.log('[GET /v1/devices/.../registrations] Expected calls:', serialNumbers.map((sn: string) => `GET /v1/passes/${passTypeID}/${sn}`));
+    
     await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        event: '[GET /v1/devices/.../registrations] Returning serial numbers',
-        data: { deviceID, passTypeID, passesUpdatedSince, serialNumbers, count: serialNumbers.length },
+        event: '[GET /v1/devices/.../registrations] Returning serial numbers - iOS should fetch passes',
+        data: { 
+          deviceID, 
+          passTypeID, 
+          passesUpdatedSince, 
+          serialNumbers, 
+          count: serialNumbers.length,
+          expectedCalls: serialNumbers.map((sn: string) => `GET /v1/passes/${passTypeID}/${sn}`),
+        },
         level: 'info',
       }),
     }).catch(() => {});
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:670',message:'Returning serial numbers to iOS',data:{serialNumbers,passTypeID,expectedCalls:serialNumbers.map((sn:string)=>`GET /v1/passes/${passTypeID}/${sn}`)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+    
     return NextResponse.json(serialNumbers, { status: 200 });
   } catch (error) {
     console.error('Error in handleGetUpdatedPasses:', error);
