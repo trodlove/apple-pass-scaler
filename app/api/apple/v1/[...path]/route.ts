@@ -482,21 +482,59 @@ async function handleGetUpdatedPasses(
     }
 
     // Get all passes registered to this device for this passTypeID that have been updated since the timestamp
+    // CRITICAL: If passesUpdatedSince is provided, only return passes updated AFTER that timestamp
+    // If not provided, return ALL passes for this device (iOS will then fetch each one and compare)
     let query = supabaseAdmin
       .from('registrations')
-      .select('pass_id, passes!inner(serial_number, last_updated_at, apple_account_id)')
+      .select('pass_id, passes!inner(serial_number, last_updated_at, apple_account_id, pass_data)')
       .eq('device_id', device.id)
       .eq('passes.apple_account_id', account.id);
 
+    // Log query parameters
+    console.log('[GET /v1/devices/.../registrations] Query parameters:', {
+      deviceID: deviceID.substring(0, 20) + '...',
+      deviceId: device.id,
+      passTypeID,
+      accountId: account.id,
+      passesUpdatedSince: passesUpdatedSince || 'none (returning all passes)',
+    });
+
     if (passesUpdatedSince) {
       // Filter by last_updated_at - only return passes updated since the given timestamp
-      query = query.gt('passes.last_updated_at', passesUpdatedSince);
+      // CRITICAL: Use gte (greater than or equal) to include passes updated at the exact timestamp
+      // This handles edge cases where the timestamp matches exactly
+      query = query.gte('passes.last_updated_at', passesUpdatedSince);
+      console.log('[GET /v1/devices/.../registrations] Filtering by passesUpdatedSince:', passesUpdatedSince);
+    } else {
+      console.log('[GET /v1/devices/.../registrations] No passesUpdatedSince - returning all passes for device');
     }
 
     const { data: registrations, error: regError } = await query;
+    
+    // Log query results
+    const sampleReg = registrations && registrations.length > 0 ? registrations[0] : null;
+    console.log('[GET /v1/devices/.../registrations] Query results:', {
+      registrationsCount: registrations?.length || 0,
+      hasError: !!regError,
+      errorMessage: regError?.message,
+      sampleRegistration: sampleReg ? {
+        passId: sampleReg.pass_id,
+        serialNumber: (sampleReg.passes as any)?.serial_number,
+        lastUpdatedAt: (sampleReg.passes as any)?.last_updated_at,
+      } : null,
+    });
 
     if (regError) {
       console.error('[GET /v1/devices/.../registrations] Error fetching registrations:', regError);
+      await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: '[GET /v1/devices/.../registrations] Error fetching registrations',
+          data: { deviceID, passTypeID, passesUpdatedSince, error: regError.message },
+          level: 'error',
+        }),
+      }).catch(() => {});
       return new NextResponse('Internal Server Error', { status: 500 });
     }
 
@@ -508,11 +546,31 @@ async function handleGetUpdatedPasses(
     // Log for debugging - this is called when iOS checks for updated passes after silent push
     console.log('[GET /v1/devices/.../registrations] Device checking for updated passes:', {
       deviceID: deviceID.substring(0, 20) + '...',
+      passTypeID,
       passesUpdatedSince: passesUpdatedSince || 'none (all passes)',
       updatedPassesCount: serialNumbers.length,
       serialNumbers: serialNumbers,
+      registrationsCount: registrations?.length || 0,
       timestamp: new Date().toISOString(),
     });
+    
+    // Log to database for guaranteed visibility
+    await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: '[GET /v1/devices/.../registrations] Returning updated passes',
+        data: { 
+          deviceID: deviceID.substring(0, 20) + '...', 
+          passTypeID,
+          passesUpdatedSince: passesUpdatedSince || 'none',
+          serialNumbersCount: serialNumbers.length,
+          serialNumbers,
+          registrationsCount: registrations?.length || 0,
+        },
+        level: serialNumbers.length > 0 ? 'info' : 'warn',
+      }),
+    }).catch(() => {});
 
     if (serialNumbers.length === 0) {
       // Return empty array, not 204 - per Apple docs, should return [] not 204
