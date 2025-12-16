@@ -28,37 +28,36 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
   const stripUrl = passData?.strip_2x_url || passData?.strip_1x_url || passData?.stripImage || '';
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[340px]">
-      {/* Pass Preview - matches iOS Wallet exactly */}
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" style={{ maxWidth: '320px' }}>
+      {/* Pass Preview - proper flow layout */}
       <div
-        className="relative rounded-t-xl overflow-hidden"
+        className="rounded-t-xl overflow-hidden flex flex-col"
         style={{
           backgroundColor,
           color: foregroundColor,
-          height: '380px',
         }}
       >
-        {/* === TOP HEADER ROW === */}
-        <div className="flex items-start justify-between px-4 pt-4">
+        {/* === HEADER ROW === */}
+        <div className="flex items-start justify-between px-3 pt-3 pb-2">
           {/* Left: Icon + Logo Text */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {iconUrl && !imageError ? (
               <img
                 src={iconUrl}
                 alt="Icon"
-                className="w-10 h-10 rounded-lg object-cover"
+                className="w-8 h-8 rounded-md object-cover"
                 onError={() => setImageError(true)}
               />
             ) : (
               <div 
-                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                className="w-8 h-8 rounded-md flex items-center justify-center"
                 style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}
               >
-                <div className="w-5 h-6 bg-black/50 rounded-sm" />
+                <div className="w-4 h-5 bg-black/50 rounded-sm" />
               </div>
             )}
             <span 
-              className="text-base font-medium"
+              className="text-[13px] font-medium"
               style={{ color: foregroundColor }}
             >
               {passData?.logoText || 'Logo'}
@@ -68,13 +67,13 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
           {/* Right: Header Field */}
           <div className="text-right">
             <div 
-              className="text-[10px] uppercase tracking-wide font-medium"
+              className="text-[9px] uppercase tracking-wide font-medium"
               style={{ color: labelColor }}
             >
               {passData?.headerLabel || 'HEADER'}
             </div>
             <div 
-              className="text-xl font-semibold leading-tight"
+              className="text-[16px] font-semibold leading-tight"
               style={{ color: foregroundColor }}
             >
               {passData?.headerValue || 'value'}
@@ -83,15 +82,15 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
         </div>
 
         {/* === PRIMARY FIELD === */}
-        <div className="px-4 mt-4">
+        <div className="px-3 pb-2">
           <div 
-            className="text-[10px] uppercase tracking-wide font-medium"
+            className="text-[9px] uppercase tracking-wide font-medium"
             style={{ color: labelColor }}
           >
             {passData?.primaryLabel || 'WELCOME'}
           </div>
           <div 
-            className="text-2xl font-semibold leading-tight"
+            className="text-[20px] font-semibold leading-tight"
             style={{ color: foregroundColor }}
           >
             {passData?.primaryValue || passData?.organizationName || 'Apple Pass Scaler'}
@@ -100,7 +99,7 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
 
         {/* === STRIP IMAGE (if exists) === */}
         {stripUrl && (
-          <div className="w-full h-24 mt-3 overflow-hidden">
+          <div className="w-full h-20 overflow-hidden">
             <img
               src={stripUrl}
               alt="Strip"
@@ -110,16 +109,16 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
         )}
 
         {/* === SECONDARY FIELDS === */}
-        <div className="flex justify-between px-4 mt-4">
+        <div className="flex justify-between px-3 py-3">
           <div>
             <div 
-              className="text-[10px] uppercase tracking-wide font-medium"
+              className="text-[9px] uppercase tracking-wide font-medium"
               style={{ color: labelColor }}
             >
               {passData?.secondaryLeftLabel || 'LEFT'}
             </div>
             <div 
-              className="text-base font-medium"
+              className="text-[13px] font-medium"
               style={{ color: foregroundColor }}
             >
               {passData?.secondaryLeftValue || 'value'}
@@ -127,13 +126,13 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
           </div>
           <div className="text-right">
             <div 
-              className="text-[10px] uppercase tracking-wide font-medium"
+              className="text-[9px] uppercase tracking-wide font-medium"
               style={{ color: labelColor }}
             >
               {passData?.secondaryRightLabel || 'RIGHT'}
             </div>
             <div 
-              className="text-base font-medium"
+              className="text-[13px] font-medium"
               style={{ color: foregroundColor }}
             >
               {passData?.secondaryRightValue || 'value'}
@@ -141,10 +140,13 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
           </div>
         </div>
 
+        {/* === SPACER === */}
+        <div className="min-h-[40px]" />
+
         {/* === QR CODE === */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
-          <div className="bg-white rounded-xl p-2.5 shadow-lg">
-            <div className="w-20 h-20 flex items-center justify-center">
+        <div className="flex justify-center pb-4">
+          <div className="bg-white rounded-lg p-2 shadow">
+            <div className="w-16 h-16 flex items-center justify-center">
               <svg viewBox="0 0 100 100" className="w-full h-full">
                 <rect x="0" y="0" width="100" height="100" fill="white"/>
                 <rect x="5" y="5" width="25" height="25" fill="black"/>
@@ -169,39 +171,39 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
       </div>
 
       {/* Pass Info */}
-      <div className="p-4 space-y-2">
-        <div className="font-semibold text-gray-900">
+      <div className="p-3 space-y-1.5">
+        <div className="font-semibold text-gray-900 text-[14px]">
           {passData?.organizationName || 'Apple Pass Scaler'}
         </div>
-        <div className="text-sm text-gray-500 truncate font-mono">
+        <div className="text-[11px] text-gray-500 truncate font-mono">
           {pass.serial_number}
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2 pt-2">
+        <div className="flex items-center gap-1.5 pt-1.5">
           {onShare && (
-            <Button variant="outline" size="sm" onClick={onShare} title="Share">
-              <Share2 className="h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={onShare} title="Share" className="h-8 w-8 p-0">
+              <Share2 className="h-3.5 w-3.5" />
             </Button>
           )}
           {onNotify && (
-            <Button variant="outline" size="sm" onClick={onNotify} title="Send Notification">
-              <Bell className="h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={onNotify} title="Send Notification" className="h-8 w-8 p-0">
+              <Bell className="h-3.5 w-3.5" />
             </Button>
           )}
           {onEdit && (
-            <Button variant="outline" size="sm" onClick={onEdit} title="Edit">
-              <Edit className="h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={onEdit} title="Edit" className="h-8 w-8 p-0">
+              <Edit className="h-3.5 w-3.5" />
             </Button>
           )}
           {onDownload && (
-            <Button variant="outline" size="sm" onClick={onDownload} title="Download">
-              <Download className="h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={onDownload} title="Download" className="h-8 w-8 p-0">
+              <Download className="h-3.5 w-3.5" />
             </Button>
           )}
           {onDelete && (
-            <Button variant="outline" size="sm" onClick={onDelete} className="text-red-600 hover:text-red-700" title="Delete">
-              <Trash2 className="h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={onDelete} className="h-8 w-8 p-0 text-red-600 hover:text-red-700" title="Delete">
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           )}
         </div>
