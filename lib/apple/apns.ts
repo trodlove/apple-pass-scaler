@@ -24,17 +24,22 @@ export async function sendSilentPush(
     }
 
     // Prepare APNs auth key
-    // Per the guide: if stored as base64, decode: Buffer.from(key, "base64").toString("ascii")
-    // We store as PEM, so use directly as string
-    // The apn library accepts key as string (PEM) or Buffer
-    // Per guide example: key is passed as string (PEM) after decoding from base64
+    // Per the guide: key should be stored as base64, then decoded: Buffer.from(key, "base64").toString("ascii")
+    // This produces a PEM string that the apn library expects
+    // If we have PEM already, ensure it has proper formatting (newlines)
     let authKey = appleCredentials.apns_auth_key.trim();
-    let keyValue: Buffer | string;
+    let keyValue: string;
     
-    // If key has BEGIN/END markers, it's PEM format - use as string
+    // If key has BEGIN/END markers, it's PEM format
     if (authKey.includes('BEGIN') && authKey.includes('END')) {
-      keyValue = authKey; // Use PEM string directly
-      console.log('[APNs] Using PEM key as string');
+      // Ensure proper newlines (CRITICAL for PEM format)
+      // Replace any \r\n or \r with \n, then ensure consistent \n
+      keyValue = authKey.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      // Ensure it ends with newline
+      if (!keyValue.endsWith('\n')) {
+        keyValue += '\n';
+      }
+      console.log('[APNs] Using PEM key as string (normalized newlines)');
     } else {
       // Might be base64 - decode it to PEM string (per guide: Buffer.from(key, "base64").toString("ascii"))
       try {
@@ -42,8 +47,11 @@ export async function sendSilentPush(
         console.log('[APNs] Decoded key from base64 to PEM string');
       } catch (e) {
         // Not base64, use as-is (assuming PEM)
-        keyValue = authKey;
-        console.log('[APNs] Using key as string (assuming PEM)');
+        keyValue = authKey.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        if (!keyValue.endsWith('\n')) {
+          keyValue += '\n';
+        }
+        console.log('[APNs] Using key as string (assuming PEM, normalized)');
       }
     }
     
