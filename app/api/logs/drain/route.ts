@@ -28,22 +28,51 @@ export async function POST(request: NextRequest) {
         let actualStatus = logEntry.status || null;
         let actualRequestId = logEntry.requestId || logEntry.request_id || '';
         
-        // If logEntry has a proxy object (Vercel format), extract from there
-        if (logEntry.proxy) {
-          actualPath = logEntry.proxy.path || actualPath;
-          actualMethod = logEntry.proxy.method || actualMethod;
-          actualStatus = logEntry.proxy.statusCode || actualStatus;
+        // Vercel sends logs in a nested format - check if this is a wrapped log entry
+        // The actual log data might be in raw_data array
+        let actualLogData = logEntry;
+        if (logEntry.raw_data && Array.isArray(logEntry.raw_data) && logEntry.raw_data.length > 0) {
+          // Use the first item in raw_data as the actual log entry
+          actualLogData = logEntry.raw_data[0];
         }
         
-        // Extract message from nested raw_data if present
-        if (!actualMessage && logEntry.raw_data && Array.isArray(logEntry.raw_data) && logEntry.raw_data[0]) {
-          actualMessage = logEntry.raw_data[0].message || actualMessage;
+        // Extract from proxy object (Vercel format)
+        if (actualLogData.proxy) {
+          actualPath = actualLogData.proxy.path || actualPath;
+          actualMethod = actualLogData.proxy.method || actualMethod;
+          actualStatus = actualLogData.proxy.statusCode || actualStatus;
+          actualRequestId = actualLogData.proxy.requestId || actualRequestId;
         }
         
-        // If still no message, try to extract from the log entry structure
-        if (!actualMessage && typeof logEntry === 'object') {
-          // Look for common log message fields
-          actualMessage = logEntry.log || logEntry.output || logEntry.stdout || logEntry.stderr || '';
+        // Extract message - check multiple possible locations
+        if (!actualMessage) {
+          actualMessage = actualLogData.message || 
+                         actualLogData.text || 
+                         actualLogData.log || 
+                         actualLogData.output || 
+                         actualLogData.stdout || 
+                         actualLogData.stderr || 
+                         '';
+        }
+        
+        // Extract path if still missing
+        if (!actualPath) {
+          actualPath = actualLogData.path || actualLogData.url || '';
+        }
+        
+        // Extract method if still missing
+        if (!actualMethod) {
+          actualMethod = actualLogData.method || null;
+        }
+        
+        // Extract status if still missing
+        if (!actualStatus) {
+          actualStatus = actualLogData.status || actualLogData.statusCode || null;
+        }
+        
+        // Extract request ID if still missing
+        if (!actualRequestId) {
+          actualRequestId = actualLogData.requestId || actualLogData.request_id || '';
         }
         
         logs.push({
