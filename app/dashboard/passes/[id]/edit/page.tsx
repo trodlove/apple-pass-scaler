@@ -43,6 +43,15 @@ export default function EditPassPage() {
     secondaryRightLabel: '',
     secondaryRightValue: '',
     websiteUrl: '',
+    
+    // Step 4: Back Fields
+    latestNewsText: '',
+    latestNewsLink: '',
+    makeMoneyLink: '',
+    redeemCashLink: '',
+    shareEarnLink: '',
+    notificationMessage: '',
+    customerServiceLink: '',
   });
 
   useEffect(() => {
@@ -75,6 +84,14 @@ export default function EditPassPage() {
           secondaryRightLabel: passData.secondaryRightLabel || '',
           secondaryRightValue: passData.secondaryRightValue || '',
           websiteUrl: passData.websiteUrl || '',
+          // Back Fields
+          latestNewsText: passData.latestNewsText || '',
+          latestNewsLink: passData.latestNewsLink || '',
+          makeMoneyLink: passData.makeMoneyLink || '',
+          redeemCashLink: passData.redeemCashLink || '',
+          shareEarnLink: passData.shareEarnLink || '',
+          notificationMessage: passData.notificationMessage || '',
+          customerServiceLink: passData.customerServiceLink || '',
         });
       }
     } catch (error) {
@@ -176,7 +193,7 @@ export default function EditPassPage() {
       {/* Progress Indicator */}
       <div className="mb-8">
         <div className="flex items-center justify-center space-x-4">
-          {[1, 2, 3].map((step) => (
+          {[1, 2, 3, 4].map((step) => (
             <div key={step} className="flex items-center">
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
@@ -189,7 +206,7 @@ export default function EditPassPage() {
               >
                 {currentStep > step ? <Check className="h-5 w-5" /> : step}
               </div>
-              {step < 3 && (
+              {step < 4 && (
                 <div
                   className={`w-16 h-1 mx-2 ${
                     currentStep > step ? 'bg-green-500' : 'bg-gray-200'
@@ -200,7 +217,7 @@ export default function EditPassPage() {
           ))}
         </div>
         <p className="text-center mt-4 text-sm text-gray-600">
-          Step {currentStep} of 3
+          Step {currentStep} of 4
         </p>
       </div>
 
@@ -553,6 +570,108 @@ export default function EditPassPage() {
             </Card>
           )}
 
+          {currentStep === 4 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Back of Pass Fields</CardTitle>
+                <CardDescription>Configure the fields and links that appear on the back of your pass.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Latest News */}
+                <div className="space-y-4 p-4 border rounded-lg">
+                  <h3 className="font-semibold text-sm">Latest News</h3>
+                  <div className="space-y-2">
+                    <Label htmlFor="latestNewsText">News Text</Label>
+                    <Input
+                      id="latestNewsText"
+                      value={formData.latestNewsText}
+                      onChange={(e) => setFormData({ ...formData, latestNewsText: e.target.value })}
+                      placeholder="Unlock bonuses up to 2X your earnings! Find your new daily bonus here."
+                    />
+                    <p className="text-xs text-gray-500">The text that will appear for the latest news field.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="latestNewsLink">News Link</Label>
+                    <Input
+                      id="latestNewsLink"
+                      type="url"
+                      value={formData.latestNewsLink}
+                      onChange={(e) => setFormData({ ...formData, latestNewsLink: e.target.value })}
+                      placeholder="https://example.com/latest-news"
+                    />
+                    <p className="text-xs text-gray-500">The clickable link URL for the latest news.</p>
+                  </div>
+                </div>
+
+                {/* Make Money Link */}
+                <div className="space-y-2">
+                  <Label htmlFor="makeMoneyLink">Make Money Link</Label>
+                  <Input
+                    id="makeMoneyLink"
+                    type="url"
+                    value={formData.makeMoneyLink}
+                    onChange={(e) => setFormData({ ...formData, makeMoneyLink: e.target.value })}
+                    placeholder="https://example.com/make-money"
+                  />
+                  <p className="text-xs text-gray-500">Link that appears as "Make Money" on the back of the pass.</p>
+                </div>
+
+                {/* Redeem Cash Link */}
+                <div className="space-y-2">
+                  <Label htmlFor="redeemCashLink">Redeem Cash Link</Label>
+                  <Input
+                    id="redeemCashLink"
+                    type="url"
+                    value={formData.redeemCashLink}
+                    onChange={(e) => setFormData({ ...formData, redeemCashLink: e.target.value })}
+                    placeholder="https://example.com/redeem"
+                  />
+                  <p className="text-xs text-gray-500">Link that appears as "Redeem Earnings" on the back of the pass.</p>
+                </div>
+
+                {/* Share and Earn Link */}
+                <div className="space-y-2">
+                  <Label htmlFor="shareEarnLink">Share and Earn Link</Label>
+                  <Input
+                    id="shareEarnLink"
+                    type="url"
+                    value={formData.shareEarnLink}
+                    onChange={(e) => setFormData({ ...formData, shareEarnLink: e.target.value })}
+                    placeholder="https://example.com/share"
+                  />
+                    <p className="text-xs text-gray-500">Link that appears as &quot;Pass the Gravy&quot; on the back of the pass.</p>
+                </div>
+
+                {/* Customer Service Link */}
+                <div className="space-y-2">
+                  <Label htmlFor="customerServiceLink">Customer Service Link</Label>
+                  <Input
+                    id="customerServiceLink"
+                    type="url"
+                    value={formData.customerServiceLink}
+                    onChange={(e) => setFormData({ ...formData, customerServiceLink: e.target.value })}
+                    placeholder="https://example.com/support"
+                  />
+                  <p className="text-xs text-gray-500">Link that appears as "Get Help" on the back of the pass.</p>
+                </div>
+
+                {/* Notification Message */}
+                <div className="space-y-2 p-4 border rounded-lg bg-blue-50">
+                  <Label htmlFor="notificationMessage">Notification Message (Last Update Field)</Label>
+                  <Input
+                    id="notificationMessage"
+                    value={formData.notificationMessage}
+                    onChange={(e) => setFormData({ ...formData, notificationMessage: e.target.value })}
+                    placeholder="Welcome! Check back for updates."
+                  />
+                  <p className="text-xs text-gray-500">
+                    This message appears in the &quot;Last Update&quot; field on the back of the pass. When this changes, it triggers a push notification to users.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Navigation Buttons */}
           <div className="flex justify-between mt-6">
             <Button
@@ -562,7 +681,7 @@ export default function EditPassPage() {
             >
               Previous
             </Button>
-            {currentStep < 3 ? (
+            {currentStep < 4 ? (
               <Button onClick={() => setCurrentStep(currentStep + 1)}>
                 Next
               </Button>
