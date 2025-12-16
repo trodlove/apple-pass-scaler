@@ -19,21 +19,48 @@ export async function POST(request: NextRequest) {
     for (const line of logLines) {
       try {
         const logEntry = JSON.parse(line);
+        
+        // Vercel Log Drains format: extract message from nested structure
+        // The actual log message can be in logEntry.message or logEntry.raw_data[0].message
+        let actualMessage = logEntry.message || logEntry.text || '';
+        let actualPath = logEntry.path || logEntry.url || '';
+        let actualMethod = logEntry.method || null;
+        let actualStatus = logEntry.status || null;
+        let actualRequestId = logEntry.requestId || logEntry.request_id || '';
+        
+        // If logEntry has a proxy object (Vercel format), extract from there
+        if (logEntry.proxy) {
+          actualPath = logEntry.proxy.path || actualPath;
+          actualMethod = logEntry.proxy.method || actualMethod;
+          actualStatus = logEntry.proxy.statusCode || actualStatus;
+        }
+        
+        // Extract message from nested raw_data if present
+        if (!actualMessage && logEntry.raw_data && Array.isArray(logEntry.raw_data) && logEntry.raw_data[0]) {
+          actualMessage = logEntry.raw_data[0].message || actualMessage;
+        }
+        
+        // If still no message, try to extract from the log entry structure
+        if (!actualMessage && typeof logEntry === 'object') {
+          // Look for common log message fields
+          actualMessage = logEntry.log || logEntry.output || logEntry.stdout || logEntry.stderr || '';
+        }
+        
         logs.push({
           id: logEntry.id || `log_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-          timestamp: logEntry.timestamp || new Date().toISOString(),
-          message: logEntry.message || logEntry.text || '',
+          timestamp: logEntry.timestamp ? new Date(logEntry.timestamp).toISOString() : new Date().toISOString(),
+          message: actualMessage,
           level: logEntry.level || 'info',
-          project: logEntry.project || 'apple-pass-scaler',
-          deployment: logEntry.deployment || '',
+          project: logEntry.project || logEntry.projectName || 'apple-pass-scaler',
+          deployment: logEntry.deployment || logEntry.deploymentId || '',
           source: logEntry.source || 'runtime',
-          request_id: logEntry.requestId || '',
-          status: logEntry.status || null,
-          method: logEntry.method || null,
-          path: logEntry.path || logEntry.url || '',
-          user_agent: logEntry.userAgent || '',
-          ip: logEntry.ip || '',
-          region: logEntry.region || '',
+          request_id: actualRequestId,
+          status: actualStatus,
+          method: actualMethod,
+          path: actualPath,
+          user_agent: logEntry.userAgent || logEntry.user_agent || '',
+          ip: logEntry.ip || (logEntry.proxy && logEntry.proxy.clientIp) || '',
+          region: logEntry.region || (logEntry.proxy && logEntry.proxy.region) || '',
           raw_data: logEntry,
         });
       } catch (e) {
