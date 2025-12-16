@@ -26,20 +26,19 @@ export async function sendSilentPush(
     // Prepare APNs auth key
     // Per the guide: key should be stored as base64, then decoded: Buffer.from(key, "base64").toString("ascii")
     // This produces a PEM string that the apn library expects
-    // If we have PEM already, ensure it has proper formatting (newlines)
+    // CRITICAL: The key must match the keyId and teamId exactly
     let authKey = appleCredentials.apns_auth_key.trim();
     let keyValue: string;
     
     // If key has BEGIN/END markers, it's PEM format
     if (authKey.includes('BEGIN') && authKey.includes('END')) {
-      // Ensure proper newlines (CRITICAL for PEM format)
-      // Replace any \r\n or \r with \n, then ensure consistent \n
+      // Normalize newlines - PEM format requires \n (Unix style)
       keyValue = authKey.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-      // Ensure it ends with newline
-      if (!keyValue.endsWith('\n')) {
-        keyValue += '\n';
-      }
-      console.log('[APNs] Using PEM key as string (normalized newlines)');
+      // Remove any trailing whitespace but keep the structure
+      keyValue = keyValue.trim() + '\n';
+      console.log('[APNs] Using PEM key as string (normalized)');
+      console.log('[APNs] Key ID:', appleCredentials.apns_key_id);
+      console.log('[APNs] Team ID:', appleCredentials.team_id);
     } else {
       // Might be base64 - decode it to PEM string (per guide: Buffer.from(key, "base64").toString("ascii"))
       try {
@@ -47,10 +46,7 @@ export async function sendSilentPush(
         console.log('[APNs] Decoded key from base64 to PEM string');
       } catch (e) {
         // Not base64, use as-is (assuming PEM)
-        keyValue = authKey.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-        if (!keyValue.endsWith('\n')) {
-          keyValue += '\n';
-        }
+        keyValue = authKey.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim() + '\n';
         console.log('[APNs] Using key as string (assuming PEM, normalized)');
       }
     }
