@@ -69,19 +69,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Update pass_data with the broadcast message
+    // CRITICAL: Set both notificationMessage and broadcastMessage to ensure the notification field updates
+    // Also ensure the message is unique so iOS detects the change
+    const updateTimestamp = new Date().toISOString();
     const updatePromises = passes.map(pass => {
+      // Use a unique message that includes timestamp to ensure iOS detects the change
+      const uniqueMessage = `${message} - ${new Date().toLocaleTimeString()}`;
+      
       const updatedPassData = {
         ...pass.pass_data,
-        broadcastMessage: message,
-        broadcastAt: new Date().toISOString(),
+        notificationMessage: uniqueMessage, // CRITICAL: This is what triggers the notification
+        broadcastMessage: message, // Keep for backward compatibility
+        broadcastAt: updateTimestamp,
       };
 
       return supabaseAdmin
         .from('passes')
         .update({
           pass_data: updatedPassData,
-          last_updated_at: new Date().toISOString(),
-          last_modified: new Date().toISOString(), // CRITICAL: iOS uses this to detect updates
+          last_updated_at: updateTimestamp,
+          last_modified: updateTimestamp, // CRITICAL: iOS uses this to detect updates
         })
         .eq('id', pass.id);
     });
