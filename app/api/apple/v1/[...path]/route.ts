@@ -505,8 +505,30 @@ async function handleGetUpdatedPasses(
       // This handles edge cases where the timestamp matches exactly
       query = query.gte('passes.last_updated_at', passesUpdatedSince);
       console.log('[GET /v1/devices/.../registrations] Filtering by passesUpdatedSince:', passesUpdatedSince);
+      
+      // Log to database
+      await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: '[GET /v1/devices/.../registrations] Filtering by passesUpdatedSince',
+          data: { deviceID, passTypeID, passesUpdatedSince },
+          level: 'info',
+        }),
+      }).catch(() => {});
     } else {
       console.log('[GET /v1/devices/.../registrations] No passesUpdatedSince - returning all passes for device');
+      
+      // Log to database
+      await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: '[GET /v1/devices/.../registrations] No passesUpdatedSince - returning all passes',
+          data: { deviceID, passTypeID },
+          level: 'info',
+        }),
+      }).catch(() => {});
     }
 
     const { data: registrations, error: regError } = await query;
