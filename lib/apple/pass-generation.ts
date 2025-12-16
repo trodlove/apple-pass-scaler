@@ -129,135 +129,9 @@ export async function generatePassBuffer(
       });
     }
 
-    // Add backFields with rich content and notification field (CRITICAL for push notifications)
-    // This field must have changeMessage property for notifications to work
-    // Per Apple docs: notifications only appear when a field with changeMessage is updated
-    if (!passJson.backFields) {
-      passJson.backFields = [];
-    }
-    
-    // Clear existing backFields to rebuild with proper structure
-    passJson.backFields = [];
-    
-    // Add "Latest news" field with link support
-    if (passData.latestNewsText || passData.latestNewsLink) {
-      const latestNewsField: any = {
-        key: 'latestNews',
-        label: 'Latest news:',
-        value: passData.latestNewsText || 'Unlock bonuses up to 2X your earnings! Find your new daily bonus here.',
-      };
-      
-      if (passData.latestNewsLink) {
-        latestNewsField.attributedValue = `<a href='${passData.latestNewsLink}'>${passData.latestNewsText || 'here'}</a>`;
-      }
-      
-      passJson.backFields.push(latestNewsField);
-    } else {
-      // Default latest news field
-      passJson.backFields.push({
-        key: 'latestNews',
-        label: 'Latest news:',
-        value: 'Unlock bonuses up to 2X your earnings! Find your new daily bonus for Tuesday here.',
-        attributedValue: '<a href=\'https://example.com/latest-news\'>here</a>',
-      });
-    }
-    
-    // Add "Make more money" field with link
-    if (passData.makeMoneyLink) {
-      passJson.backFields.push({
-        key: 'makeMoney',
-        label: 'Make more money:',
-        value: 'Make Money',
-        attributedValue: `<a href='${passData.makeMoneyLink}'>Make Money</a>`,
-      });
-    } else {
-      passJson.backFields.push({
-        key: 'makeMoney',
-        label: 'Make more money:',
-        value: 'Make Money',
-        attributedValue: '<a href=\'https://example.com/make-money\'>Make Money</a>',
-      });
-    }
-    
-    // Add "Redeem your cash" field with link
-    if (passData.redeemCashLink) {
-      passJson.backFields.push({
-        key: 'redeemCash',
-        label: 'Redeem your cash:',
-        value: 'Redeem Earnings',
-        attributedValue: `<a href='${passData.redeemCashLink}'>Redeem Earnings</a>`,
-      });
-    } else {
-      passJson.backFields.push({
-        key: 'redeemCash',
-        label: 'Redeem your cash:',
-        value: 'Redeem Earnings',
-        attributedValue: '<a href=\'https://example.com/redeem\'>Redeem Earnings</a>',
-      });
-    }
-    
-    // Add "Share and earn" field with link
-    if (passData.shareEarnLink) {
-      passJson.backFields.push({
-        key: 'shareEarn',
-        label: 'Share and earn:',
-        value: 'Pass the Gravy',
-        attributedValue: `<a href='${passData.shareEarnLink}'>Pass the Gravy</a>`,
-      });
-    } else {
-      passJson.backFields.push({
-        key: 'shareEarn',
-        label: 'Share and earn:',
-        value: 'Pass the Gravy',
-        attributedValue: '<a href=\'https://example.com/share\'>Pass the Gravy</a>',
-      });
-    }
-    
-    // Add "Last Update" field (the notification field) - CRITICAL for push notifications
-    // This field MUST have changeMessage for notifications to work
-    // Per Apple docs: notifications only appear when a field with changeMessage is updated
-    const notificationMessage = passData.notificationMessage || passData.broadcastMessage || 'Welcome! Check back for updates.';
-    
-    // CRITICAL: changeMessage must be a proper message format with %@ placeholder
-    // The %@ will be replaced by iOS with the new field value when displaying the notification
-    // Example: If value changes to "Your bonus is ready!", notification shows "New update: Your bonus is ready!"
-    const notificationField = {
-      key: 'lastUpdate',
-      label: 'Last Update:',
-      value: notificationMessage,
-      changeMessage: 'New update: %@', // CRITICAL: Proper message format - %@ gets replaced with new value
-    };
-    
-    passJson.backFields.push(notificationField);
-    
-    // Add "Customer service" field with link
-    if (passData.customerServiceLink) {
-      passJson.backFields.push({
-        key: 'customerService',
-        label: 'Customer service:',
-        value: 'Get Help',
-        attributedValue: `<a href='${passData.customerServiceLink}'>Get Help</a>`,
-      });
-    } else {
-      passJson.backFields.push({
-        key: 'customerService',
-        label: 'Customer service:',
-        value: 'Get Help',
-        attributedValue: '<a href=\'https://example.com/help\'>Get Help</a>',
-      });
-    }
-    
-    // Log for debugging
-    console.log('[Pass Generation] BackFields created:', {
-      backFieldsCount: passJson.backFields.length,
-      allBackFields: passJson.backFields.map((f: any) => ({ key: f.key, label: f.label, hasAttributedValue: !!f.attributedValue })),
-      notificationField: {
-        key: notificationField.key,
-        label: notificationField.label,
-        value: notificationMessage.substring(0, 50),
-        changeMessage: notificationField.changeMessage,
-      },
-    });
+    // NOTE: backFields are now added directly to the PKPass object after creation
+    // This ensures they're properly included in the final pass structure
+    // See code below after PKPass object is created
 
     // Add website URL if provided
     if (passData.websiteUrl) {
@@ -362,6 +236,96 @@ export async function generatePassBuffer(
         description: passData.description || 'Wallet Pass',
       }
     );
+
+    // CRITICAL: Add backFields using PKPass object methods
+    // The library might not preserve backFields from pass.json buffer, so we add them directly
+    // Clear any existing backFields first
+    if (pass.backFields) {
+      pass.backFields.length = 0;
+    }
+    
+    // Add "Latest news" field with link support
+    if (passData.latestNewsText || passData.latestNewsLink) {
+      const latestNewsField: any = {
+        key: 'latestNews',
+        label: 'Latest news:',
+        value: passData.latestNewsText || 'Unlock bonuses up to 2X your earnings! Find your new daily bonus here.',
+      };
+      
+      if (passData.latestNewsLink) {
+        latestNewsField.attributedValue = `<a href='${passData.latestNewsLink}'>${passData.latestNewsText || 'here'}</a>`;
+      } else {
+        latestNewsField.attributedValue = '<a href=\'https://example.com/latest-news\'>here</a>';
+      }
+      
+      pass.backFields.push(latestNewsField);
+    } else {
+      // Default latest news field
+      pass.backFields.push({
+        key: 'latestNews',
+        label: 'Latest news:',
+        value: 'Unlock bonuses up to 2X your earnings! Find your new daily bonus for Tuesday here.',
+        attributedValue: '<a href=\'https://example.com/latest-news\'>here</a>',
+      });
+    }
+    
+    // Add "Make more money" field with link
+    pass.backFields.push({
+      key: 'makeMoney',
+      label: 'Make more money:',
+      value: 'Make Money',
+      attributedValue: passData.makeMoneyLink 
+        ? `<a href='${passData.makeMoneyLink}'>Make Money</a>`
+        : '<a href=\'https://example.com/make-money\'>Make Money</a>',
+    });
+    
+    // Add "Redeem your cash" field with link
+    pass.backFields.push({
+      key: 'redeemCash',
+      label: 'Redeem your cash:',
+      value: 'Redeem Earnings',
+      attributedValue: passData.redeemCashLink
+        ? `<a href='${passData.redeemCashLink}'>Redeem Earnings</a>`
+        : '<a href=\'https://example.com/redeem\'>Redeem Earnings</a>',
+    });
+    
+    // Add "Share and earn" field with link
+    pass.backFields.push({
+      key: 'shareEarn',
+      label: 'Share and earn:',
+      value: 'Pass the Gravy',
+      attributedValue: passData.shareEarnLink
+        ? `<a href='${passData.shareEarnLink}'>Pass the Gravy</a>`
+        : '<a href=\'https://example.com/share\'>Pass the Gravy</a>',
+    });
+    
+    // Add "Last Update" field (the notification field) - CRITICAL for push notifications
+    // This field MUST have changeMessage for notifications to work
+    const notificationMessage = passData.notificationMessage || passData.broadcastMessage || 'Welcome! Check back for updates.';
+    
+    // CRITICAL: changeMessage must be a proper message format with %@ placeholder
+    // The %@ will be replaced by iOS with the new field value when displaying the notification
+    pass.backFields.push({
+      key: 'lastUpdate',
+      label: 'Last Update:',
+      value: notificationMessage,
+      changeMessage: 'New update: %@', // CRITICAL: Proper message format - %@ gets replaced with new value
+    });
+    
+    // Add "Customer service" field with link
+    pass.backFields.push({
+      key: 'customerService',
+      label: 'Customer service:',
+      value: 'Get Help',
+      attributedValue: passData.customerServiceLink
+        ? `<a href='${passData.customerServiceLink}'>Get Help</a>`
+        : '<a href=\'https://example.com/help\'>Get Help</a>',
+    });
+    
+    console.log('[Pass Generation] BackFields added via PKPass object:', {
+      backFieldsCount: pass.backFields.length,
+      allBackFields: pass.backFields.map((f: any) => ({ key: f.key, label: f.label, hasAttributedValue: !!f.attributedValue, hasChangeMessage: !!f.changeMessage })),
+    });
 
     // Populate fields from template and pass data
     // Note: We're now handling fields directly in pass.json structure above
