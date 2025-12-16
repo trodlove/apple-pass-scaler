@@ -83,6 +83,8 @@ export default function EditPassPage() {
         logoText: store.logoText,
         headerLabel: store.headerLabel,
         headerValue: store.headerValue,
+        primaryLabel: store.primaryLabel,
+        primaryValue: store.primaryValue,
         backgroundColor: store.backgroundColor,
         foregroundColor: store.foregroundColor,
         labelColor: store.labelColor,

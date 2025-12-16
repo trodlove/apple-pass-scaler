@@ -210,12 +210,27 @@ export async function generatePassBuffer(
       }
     }
 
+    // Log image URLs for debugging
+    console.log('[Pass Generation] Image URLs:', {
+      logo_2x: passData.logo_2x_url ? `${passData.logo_2x_url.substring(0, 50)}...` : 'none',
+      logo_1x: passData.logo_1x_url ? `${passData.logo_1x_url.substring(0, 50)}...` : 'none',
+      logo: passData.logo ? `${passData.logo.substring(0, 50)}...` : 'none',
+      icon_2x: passData.icon_2x_url ? `${passData.icon_2x_url.substring(0, 50)}...` : 'none',
+      icon_1x: passData.icon_1x_url ? `${passData.icon_1x_url.substring(0, 50)}...` : 'none',
+      icon: passData.icon ? `${passData.icon.substring(0, 50)}...` : 'none',
+      strip_2x: passData.strip_2x_url ? `${passData.strip_2x_url.substring(0, 50)}...` : 'none',
+      strip_1x: passData.strip_1x_url ? `${passData.strip_1x_url.substring(0, 50)}...` : 'none',
+      stripImage: passData.stripImage ? `${passData.stripImage.substring(0, 50)}...` : 'none',
+    });
+
     // Add logo images - check both old and new format
     const logoUrl = passData.logo_2x_url || passData.logo_1x_url || passData.logo;
     if (logoUrl) {
       try {
+        console.log('[Pass Generation] Processing logo image...');
         const logoBuffer = await fetchImageAsBuffer(logoUrl);
         if (logoBuffer) {
+          console.log('[Pass Generation] Logo buffer size:', logoBuffer.length);
           buffers['logo.png'] = logoBuffer;
           buffers['logo@2x.png'] = logoBuffer;
           
@@ -228,6 +243,8 @@ export async function generatePassBuffer(
             const logo3xBuffer = await fetchImageAsBuffer(passData.logo_3x_url);
             if (logo3xBuffer) buffers['logo@3x.png'] = logo3xBuffer;
           }
+        } else {
+          console.log('[Pass Generation] Failed to get logo buffer');
         }
       } catch (error) {
         console.warn('Error processing logo image:', error);
@@ -238,8 +255,10 @@ export async function generatePassBuffer(
     const iconUrl = passData.icon_2x_url || passData.icon_1x_url || passData.icon;
     if (iconUrl) {
       try {
+        console.log('[Pass Generation] Processing icon image...');
         const iconBuffer = await fetchImageAsBuffer(iconUrl);
         if (iconBuffer) {
+          console.log('[Pass Generation] Icon buffer size:', iconBuffer.length);
           buffers['icon.png'] = iconBuffer;
           buffers['icon@2x.png'] = iconBuffer;
           
@@ -253,7 +272,7 @@ export async function generatePassBuffer(
             if (icon3xBuffer) buffers['icon@3x.png'] = icon3xBuffer;
           }
         } else {
-          // Fallback to minimal icon
+          console.log('[Pass Generation] Failed to get icon buffer, using minimal icon');
           buffers['icon.png'] = minimalIcon;
           buffers['icon@2x.png'] = minimalIcon;
         }
@@ -272,8 +291,10 @@ export async function generatePassBuffer(
     const stripUrl = passData.strip_2x_url || passData.strip_1x_url || passData.stripImage;
     if (stripUrl) {
       try {
+        console.log('[Pass Generation] Processing strip image...');
         const stripBuffer = await fetchImageAsBuffer(stripUrl);
         if (stripBuffer) {
+          console.log('[Pass Generation] Strip buffer size:', stripBuffer.length);
           buffers['strip.png'] = stripBuffer;
           buffers['strip@2x.png'] = stripBuffer;
           

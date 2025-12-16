@@ -47,9 +47,25 @@ export async function GET(request: NextRequest) {
       fields: {},
     };
 
+    // Prepare pass data with all required fields
+    const passDataForGeneration = {
+      ...pass.pass_data,
+      serialNumber: pass.serial_number,
+      authenticationToken: pass.authentication_token,
+      webServiceURL: `${request.nextUrl.origin}/api/apple`,
+    };
+
+    console.log('[Download Pass] Generating pass with data:', {
+      serialNumber: passDataForGeneration.serialNumber,
+      hasIcon: !!(passDataForGeneration.icon_2x_url || passDataForGeneration.icon_1x_url || passDataForGeneration.icon),
+      hasLogo: !!(passDataForGeneration.logo_2x_url || passDataForGeneration.logo_1x_url || passDataForGeneration.logo),
+      hasStrip: !!(passDataForGeneration.strip_2x_url || passDataForGeneration.strip_1x_url || passDataForGeneration.stripImage),
+      organizationName: passDataForGeneration.organizationName,
+    });
+
     // Generate pass buffer
     const passBuffer = await generatePassBuffer(
-      pass.pass_data || {},
+      passDataForGeneration,
       templateData,
       appleCredentials
     );
