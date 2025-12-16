@@ -284,11 +284,15 @@ async function handleGetPass(
         };
 
     // Update webServiceURL in pass data
+    // CRITICAL: Include notificationMessage from pass_data so updated pass has the new value
+    // This is what triggers the notification when iOS compares old vs new pass
     const passData = {
       ...pass.pass_data,
       serialNumber: pass.serial_number,
       authenticationToken: pass.authentication_token,
       webServiceURL: `${request.nextUrl.origin}/api/apple`,
+      // Ensure notificationMessage is included if it exists in pass_data
+      notificationMessage: pass.pass_data?.notificationMessage || pass.pass_data?.broadcastMessage || 'Welcome! Check back for updates.',
     };
 
     // Generate pass buffer
