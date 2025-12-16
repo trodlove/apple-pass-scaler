@@ -55,7 +55,7 @@ async function handleRequest(request: NextRequest, method: string) {
     // #endregion
     
     // CRITICAL DEBUG: Log path parsing details to console (visible in Vercel logs)
-    console.log(`[DEBUG] Path parsing:`, {
+    console.log(`[DEBUG] Path parsing:`, JSON.stringify({
       method,
       applePath,
       pathParts,
@@ -66,12 +66,13 @@ async function handleRequest(request: NextRequest, method: string) {
       isDevices: pathParts[0] === 'devices',
       isRegistrations: pathParts[2] === 'registrations',
       isGetUpdatedPassesList,
-    });
+    }));
 
     let pass: any = null;
 
     // Only require authentication for endpoints that need it
     if (!isGetUpdatedPassesList) {
+      console.log(`[DEBUG] AUTH REQUIRED - isGetUpdatedPassesList=false for path: ${applePath}`);
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:57',message:'Auth required - checking header',data:{applePath},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
@@ -108,6 +109,7 @@ async function handleRequest(request: NextRequest, method: string) {
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:79',message:'No auth required - GET updated passes list',data:{applePath,pathParts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
+      console.log(`[DEBUG] NO AUTH REQUIRED - isGetUpdatedPassesList=true for path: ${applePath}, pathParts: ${JSON.stringify(pathParts)}`);
       console.log(`[Apple Web Service] No authentication required for GET /v1/devices/.../registrations/{passTypeID}`);
     }
 
