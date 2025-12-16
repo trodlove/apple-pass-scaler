@@ -57,39 +57,81 @@ export async function generatePassBuffer(
       passJson.generic = passTypeSection;
     }
 
-    // Add header fields if provided
-    if (passData.headerLabel || passData.headerValue) {
+    // Add header fields - always include at least a default header so pass isn't blank
+    if (!passTypeSection.headerFields) {
       passTypeSection.headerFields = [];
-      if (passData.headerLabel && passData.headerValue) {
-        passTypeSection.headerFields.push({
-          key: 'header',
-          label: passData.headerLabel,
-          value: passData.headerValue,
-        });
-      }
+    }
+    if (passData.headerLabel && passData.headerValue) {
+      passTypeSection.headerFields.push({
+        key: 'header',
+        label: passData.headerLabel,
+        value: passData.headerValue,
+      });
+    } else {
+      // Add default header if none provided
+      passTypeSection.headerFields.push({
+        key: 'header',
+        label: 'Wallet Pass',
+        value: passData.organizationName || 'Apple Pass Scaler',
+      });
     }
 
-    // Add secondary fields if provided
-    if (passData.secondaryLeftLabel || passData.secondaryRightLabel) {
+    // Add secondary fields - always include at least default fields so pass isn't blank
+    if (!passTypeSection.secondaryFields) {
       passTypeSection.secondaryFields = [];
-      if (passData.secondaryLeftLabel && passData.secondaryLeftValue) {
-        passTypeSection.secondaryFields.push({
-          key: 'secondaryLeft',
-          label: passData.secondaryLeftLabel,
-          value: passData.secondaryLeftValue,
-        });
-      }
-      if (passData.secondaryRightLabel && passData.secondaryRightValue) {
-        passTypeSection.secondaryFields.push({
-          key: 'secondaryRight',
-          label: passData.secondaryRightLabel,
-          value: passData.secondaryRightValue,
-        });
-      }
+    }
+    if (passData.secondaryLeftLabel && passData.secondaryLeftValue) {
+      passTypeSection.secondaryFields.push({
+        key: 'secondaryLeft',
+        label: passData.secondaryLeftLabel,
+        value: passData.secondaryLeftValue,
+      });
+    } else {
+      // Add default secondary field
+      passTypeSection.secondaryFields.push({
+        key: 'secondaryLeft',
+        label: 'Status',
+        value: 'Active',
+      });
+    }
+    if (passData.secondaryRightLabel && passData.secondaryRightValue) {
+      passTypeSection.secondaryFields.push({
+        key: 'secondaryRight',
+        label: passData.secondaryRightLabel,
+        value: passData.secondaryRightValue,
+      });
+    } else {
+      // Add default secondary field
+      passTypeSection.secondaryFields.push({
+        key: 'secondaryRight',
+        label: 'ID',
+        value: passData.serialNumber?.substring(0, 12) || 'N/A',
+      });
+    }
+
+    // Add primaryFields - CRITICAL: These show on the front of the pass
+    // Without primaryFields, the pass will appear blank
+    if (!passTypeSection.primaryFields) {
+      passTypeSection.primaryFields = [];
+    }
+    if (passData.primaryLabel && passData.primaryValue) {
+      passTypeSection.primaryFields.push({
+        key: 'primary',
+        label: passData.primaryLabel,
+        value: passData.primaryValue,
+      });
+    } else {
+      // Add default primary field - CRITICAL: pass must have visible content on front
+      passTypeSection.primaryFields.push({
+        key: 'primary',
+        label: 'Welcome',
+        value: passData.organizationName || 'Apple Pass Scaler',
+      });
     }
 
     // Add backFields with notification field (CRITICAL for push notifications)
     // This field must have changeMessage property for notifications to work
+    // Per Apple docs: notifications only appear when a field with changeMessage is updated
     if (!passJson.backFields) {
       passJson.backFields = [];
     }
@@ -104,7 +146,7 @@ export async function generatePassBuffer(
         key: 'notificationField',
         label: 'Last Message',
         value: notificationMessage,
-        changeMessage: '%@', // This is what triggers the notification when the value changes
+        changeMessage: '%@', // CRITICAL: This is what triggers the notification when the value changes
       };
     } else {
       // Add new field
@@ -112,7 +154,7 @@ export async function generatePassBuffer(
         key: 'notificationField',
         label: 'Last Message',
         value: notificationMessage,
-        changeMessage: '%@', // This is what triggers the notification when the value changes
+        changeMessage: '%@', // CRITICAL: This is what triggers the notification when the value changes
       });
     }
 
