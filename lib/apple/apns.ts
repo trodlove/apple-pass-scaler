@@ -56,10 +56,13 @@ export async function sendSilentPush(
     // Configure APNs provider - CRITICAL: Wallet passes MUST use production: true
     // Per the guide: "All Apple Wallet passes, regardless of how they are installed, use the PRODUCTION APNs environment."
     // Per guide example: key is passed as string (PEM) after decoding from base64
-    // The apn library accepts key as string (PEM) or Buffer - try string first (as per guide)
+    // The apn library accepts key as string (PEM), Buffer, or file path
+    // Try as Buffer first (most reliable format)
+    const keyBuffer = Buffer.from(keyValue, 'utf-8');
+    
     const options: any = {
       token: {
-        key: keyValue, // PEM string (per guide: Buffer.from(base64).toString("ascii") produces string)
+        key: keyBuffer, // Use Buffer for maximum compatibility
         keyId: appleCredentials.apns_key_id,
         teamId: appleCredentials.team_id,
       },
@@ -70,10 +73,10 @@ export async function sendSilentPush(
       keyId: options.token.keyId,
       teamId: options.token.teamId,
       production: options.production,
-      keyType: typeof options.token.key,
-      keyLength: options.token.key.length,
-      keyFirstLine: options.token.key.split('\n')[0],
-      keyLastLine: options.token.key.split('\n').slice(-2)[0],
+      keyType: 'Buffer',
+      keyLength: keyBuffer.length,
+      keyFirstLine: keyValue.split('\n')[0],
+      keyLastLine: keyValue.split('\n').slice(-2)[0],
     });
     
     // #region agent log
