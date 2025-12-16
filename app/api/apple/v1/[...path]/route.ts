@@ -295,6 +295,14 @@ async function handleGetPass(
       notificationMessage: pass.pass_data?.notificationMessage || pass.pass_data?.broadcastMessage || 'Welcome! Check back for updates.',
     };
 
+    // Log for debugging - this endpoint is called when device fetches updated pass after silent push
+    console.log('[GET /v1/passes] Regenerating pass with updated data:', {
+      serialNumber: pass.serial_number,
+      hasNotificationMessage: !!passData.notificationMessage,
+      notificationMessage: passData.notificationMessage?.substring(0, 50),
+      passDataKeys: Object.keys(passData),
+    });
+
     // Generate pass buffer
     const passBuffer = await generatePassBuffer(passData, templateData, credentials);
 

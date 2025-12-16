@@ -166,6 +166,7 @@ export async function generatePassBuffer(
       value: notificationMessage.substring(0, 50),
       hasChangeMessage: !!notificationField.changeMessage,
       backFieldsCount: passJson.backFields.length,
+      allBackFields: passJson.backFields.map((f: any) => ({ key: f.key, label: f.label })),
     });
 
     // Add website URL if provided
