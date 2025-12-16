@@ -99,8 +99,7 @@ export default function CampaignsPage() {
             <p className="text-gray-600 mb-6">Schedule a campaign to get started.</p>
             <Button
               onClick={() => {
-                // Scroll to create notification form
-                document.getElementById('create-notification')?.scrollIntoView({ behavior: 'smooth' });
+                window.location.href = '/dashboard/notifications';
               }}
               className="bg-orange-500 hover:bg-orange-600"
             >

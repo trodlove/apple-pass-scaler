@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Upload, Check } from 'lucide-react';
+import { ArrowLeft, Upload, Check, Moon } from 'lucide-react';
 import Link from 'next/link';
 import type { Pass } from '@/lib/types';
 
@@ -630,24 +630,29 @@ export default function EditPassPage() {
               <div className="mt-6">
                 <div className="flex items-center justify-between mb-2">
                   <Label>Notification Preview</Label>
-                  <button className="text-xs text-gray-500">Dark</button>
+                  <button className="text-xs text-gray-500 flex items-center gap-1">
+                    <Moon className="h-3 w-3" />
+                    Dark
+                  </button>
                 </div>
                 <div className="bg-white border rounded-lg p-4 shadow-sm">
                   <div className="flex items-start gap-3">
                     {formData.icon && (
-                      <img src={formData.icon} alt="Icon" className="w-8 h-8 rounded" />
+                      <img src={formData.icon} alt="Icon" className="w-10 h-10 rounded" />
                     )}
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-semibold text-sm">{formData.organizationName || 'TEST'}</span>
-                        <span className="text-xs text-gray-500">11:15 AM</span>
+                        <span className="text-xs text-gray-500">
+                          {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       </div>
                       <p className="text-sm text-gray-700">
                         Welcome to {formData.organizationName || 'TEST'}! Tap to view your exclusive offers and rewards.
                       </p>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">iOS Lock Screen Preview</p>
+                  <p className="text-xs text-gray-500 mt-2 text-center">iOS Lock Screen Preview</p>
                 </div>
               </div>
             </CardContent>
