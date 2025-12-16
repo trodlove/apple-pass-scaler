@@ -34,7 +34,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const testMessage = `Test notification - ${new Date().toLocaleTimeString()}`;
+    // CRITICAL: Use a unique message that's different from the current value
+    // iOS only shows notification if the field value actually changes
+    const currentMessage = pass.pass_data?.notificationMessage || pass.pass_data?.broadcastMessage || 'Welcome! Check back for updates.';
+    const testMessage = `🚀 Test notification - ${new Date().toLocaleTimeString()} - ${Math.random().toString(36).substring(7)}`;
+    
+    console.log('[Test Specific Pass] Notification update:', {
+      serialNumber: pass.serial_number,
+      currentMessage: currentMessage.substring(0, 50),
+      newMessage: testMessage.substring(0, 50),
+      willChange: currentMessage !== testMessage,
+    });
 
     // Get all registered devices for this pass
     const { data: registrations, error: registrationsError } = await supabaseAdmin

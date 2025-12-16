@@ -304,11 +304,21 @@ async function handleGetPass(
     };
 
     // Log for debugging - this endpoint is called when device fetches updated pass after silent push
+    // CRITICAL: This is called AFTER iOS receives the silent push and checks for updated passes
+    const previousMessage = pass.pass_data?.notificationMessage || pass.pass_data?.broadcastMessage || 'Welcome! Check back for updates.';
+    const newMessage = passData.notificationMessage || 'Welcome! Check back for updates.';
+    const valueChanged = previousMessage !== newMessage;
+    
     console.log('[GET /v1/passes] Regenerating pass with updated data:', {
       serialNumber: pass.serial_number,
       hasNotificationMessage: !!passData.notificationMessage,
-      notificationMessage: passData.notificationMessage?.substring(0, 50),
+      previousMessage: previousMessage.substring(0, 50),
+      newMessage: newMessage.substring(0, 50),
+      valueChanged: valueChanged,
+      willTriggerNotification: valueChanged && !!passData.notificationMessage,
       passDataKeys: Object.keys(passData),
+      timestamp: new Date().toISOString(),
+      userAgent: request.headers.get('user-agent')?.substring(0, 50),
     });
 
     // Generate pass buffer
@@ -357,33 +367,44 @@ async function handleGetUpdatedPasses(
     }
 
     // Get all passes registered to this device that have been updated since the timestamp
+    // CRITICAL: This endpoint is called by iOS after receiving a silent push to check which passes need updating
     let query = supabaseAdmin
       .from('registrations')
       .select('pass_id, passes!inner(serial_number, last_updated_at)')
       .eq('device_id', device.id);
 
     if (passesUpdatedSince) {
-      // Filter by last_updated_at
+      // Filter by last_updated_at - only return passes updated since the given timestamp
       query = query.gt('passes.last_updated_at', passesUpdatedSince);
     }
 
     const { data: registrations, error: regError } = await query;
 
     if (regError) {
-      console.error('Error fetching registrations:', regError);
+      console.error('[GET /v1/devices/.../registrations] Error fetching registrations:', regError);
       return new NextResponse('Internal Server Error', { status: 500 });
-    }
-
-    if (!registrations || registrations.length === 0) {
-      return new NextResponse('', { status: 204 }); // No Content
     }
 
     // Extract serial numbers
     const serialNumbers = registrations
-      .map((reg: any) => reg.passes?.serial_number)
-      .filter((sn: string) => sn);
+      ?.map((reg: any) => reg.passes?.serial_number)
+      .filter((sn: string) => sn) || [];
 
-    // Return serial numbers as JSON
+    // Log for debugging - this is called when iOS checks for updated passes after silent push
+    console.log('[GET /v1/devices/.../registrations] Device checking for updated passes:', {
+      deviceID: deviceID.substring(0, 20) + '...',
+      passesUpdatedSince: passesUpdatedSince || 'none (all passes)',
+      updatedPassesCount: serialNumbers.length,
+      serialNumbers: serialNumbers,
+      timestamp: new Date().toISOString(),
+    });
+
+    if (serialNumbers.length === 0) {
+      // Return empty array, not 204 - per Apple docs, should return [] not 204
+      return NextResponse.json([], { status: 200 });
+    }
+
+    // Return serial numbers as JSON array - per Apple docs format
     return NextResponse.json(serialNumbers, { status: 200 });
   } catch (error) {
     console.error('Error in handleGetUpdatedPasses:', error);
