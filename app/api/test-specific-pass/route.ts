@@ -41,10 +41,15 @@ export async function POST(request: NextRequest) {
     
     console.log('[Test Specific Pass] Notification update:', {
       serialNumber: pass.serial_number,
+      passId: pass.id,
       currentMessage: currentMessage.substring(0, 50),
       newMessage: testMessage.substring(0, 50),
       willChange: currentMessage !== testMessage,
     });
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/test-specific-pass/route.ts:40',message:'Updating notification message',data:{serialNumber:pass.serial_number,currentMessage:currentMessage.substring(0,50),newMessage:testMessage.substring(0,50),willChange:currentMessage!==testMessage},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
 
     // Get all registered devices for this pass
     const { data: registrations, error: registrationsError } = await supabaseAdmin
@@ -77,13 +82,20 @@ export async function POST(request: NextRequest) {
       notificationSentAt: new Date().toISOString(),
     };
 
-    const { error: updateError } = await supabaseAdmin
+    const updateTimestamp = new Date().toISOString();
+    const { error: updateError, data: updatedPass } = await supabaseAdmin
       .from('passes')
       .update({
         pass_data: updatedPassData,
-        last_updated_at: new Date().toISOString(),
+        last_updated_at: updateTimestamp,
       })
-      .eq('id', pass.id);
+      .eq('id', pass.id)
+      .select('last_updated_at')
+      .single();
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/test-specific-pass/route.ts:75',message:'Pass updated in database',data:{serialNumber:pass.serial_number,updateTimestamp,hasError:!!updateError,updatedLastUpdatedAt:updatedPass?.last_updated_at},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
 
     if (updateError) {
       console.error('Error updating pass:', updateError);
