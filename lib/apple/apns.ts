@@ -154,10 +154,16 @@ export async function sendSilentPushToMultiple(
     pushTokens.map(async (token) => {
       try {
         return await sendSilentPush(token, appleCredentials);
-      } catch (error) {
+      } catch (error: any) {
         console.error(`[APNs] Error sending to token ${token.substring(0, 20)}...:`, error);
-        // Don't throw - let Promise.allSettled capture it
-        return false;
+        // Re-throw with error details so caller can see it
+        const errorMessage = error.message || 'Unknown error';
+        const apnsError = new Error(errorMessage) as Error & { apnsDetails?: any; originalError?: any };
+        if (error.apnsDetails) {
+          apnsError.apnsDetails = error.apnsDetails;
+        }
+        apnsError.originalError = error;
+        throw apnsError;
       }
     })
   );
@@ -177,7 +183,20 @@ export async function sendSilentPushToMultiple(
   // Collect error details from rejected promises
   const errors = results
     .filter(r => r.status === 'rejected')
-    .map(r => r.status === 'rejected' ? (r.reason instanceof Error ? r.reason.message : String(r.reason)) : '');
+    .map(r => {
+      if (r.status === 'rejected') {
+        const reason = r.reason;
+        if (reason instanceof Error) {
+          let errorMsg = reason.message;
+          if ((reason as any).apnsDetails) {
+            errorMsg += ` | APNs Details: ${JSON.stringify((reason as any).apnsDetails)}`;
+          }
+          return errorMsg;
+        }
+        return String(reason);
+      }
+      return '';
+    });
   
   if (errors.length > 0) {
     console.error('[APNs] Errors from sendSilentPushToMultiple:', errors);
