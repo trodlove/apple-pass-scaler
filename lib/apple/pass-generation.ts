@@ -137,26 +137,36 @@ export async function generatePassBuffer(
     }
     
     // Add or update notification field
+    // CRITICAL: This field MUST have changeMessage for notifications to work
+    // Per Apple docs: notifications only appear when a field with changeMessage is updated
     const notificationFieldIndex = passJson.backFields.findIndex((f: any) => f.key === 'notificationField');
     const notificationMessage = passData.notificationMessage || passData.broadcastMessage || 'Welcome! Check back for updates.';
     
+    // Always add/update the notification field - it must be present for notifications to work
+    const notificationField = {
+      key: 'notificationField',
+      label: 'Last Message',
+      value: notificationMessage,
+      changeMessage: '%@', // CRITICAL: This is what triggers the notification when the value changes
+      // The %@ placeholder will be replaced with the new value when iOS displays the notification
+    };
+    
     if (notificationFieldIndex >= 0) {
-      // Update existing field
-      passJson.backFields[notificationFieldIndex] = {
-        key: 'notificationField',
-        label: 'Last Message',
-        value: notificationMessage,
-        changeMessage: '%@', // CRITICAL: This is what triggers the notification when the value changes
-      };
+      // Update existing field - ensure value actually changes to trigger notification
+      passJson.backFields[notificationFieldIndex] = notificationField;
     } else {
       // Add new field
-      passJson.backFields.push({
-        key: 'notificationField',
-        label: 'Last Message',
-        value: notificationMessage,
-        changeMessage: '%@', // CRITICAL: This is what triggers the notification when the value changes
-      });
+      passJson.backFields.push(notificationField);
     }
+    
+    // Log for debugging
+    console.log('[Pass Generation] Notification field:', {
+      key: notificationField.key,
+      label: notificationField.label,
+      value: notificationMessage.substring(0, 50),
+      hasChangeMessage: !!notificationField.changeMessage,
+      backFieldsCount: passJson.backFields.length,
+    });
 
     // Add website URL if provided
     if (passData.websiteUrl) {
