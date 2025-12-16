@@ -36,10 +36,12 @@ async function handleRequest(request: NextRequest, method: string) {
     // Log all incoming requests for debugging
     console.log(`[Apple Web Service] ${method} ${applePath} - User-Agent: ${request.headers.get('user-agent')?.substring(0, 50)}`);
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:35',message:'Request received',data:{method,applePath,pathSegments:pathSegments.join('/'),fullPath:request.nextUrl.pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+
     // CRITICAL: GET /v1/devices/{deviceID}/registrations/{passTypeID} does NOT require authentication
     // Per Apple docs: "All requests (except for getting the list of updatable passes) are authenticated"
-    const isGetUpdatedPasses = method === 'GET' && applePath.startsWith('devices/') && applePath.includes('/registrations/') && !applePath.includes('/registrations/') || applePath.split('/').length === 4;
-    
     // Check if this is the GET /v1/devices/{deviceID}/registrations/{passTypeID} endpoint
     // Path format: devices/{deviceID}/registrations/{passTypeID}
     const pathParts = applePath.split('/');
@@ -48,13 +50,37 @@ async function handleRequest(request: NextRequest, method: string) {
       pathParts[0] === 'devices' && 
       pathParts[2] === 'registrations';
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:50',message:'Path analysis',data:{pathParts,pathPartsLength:pathParts.length,isGet:method==='GET',isDevices:pathParts[0]==='devices',isRegistrations:pathParts[2]==='registrations',isGetUpdatedPassesList},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
+    // CRITICAL DEBUG: Log path parsing details to console (visible in Vercel logs)
+    console.log(`[DEBUG] Path parsing:`, {
+      method,
+      applePath,
+      pathParts,
+      pathPartsLength: pathParts.length,
+      pathParts0: pathParts[0],
+      pathParts2: pathParts[2],
+      isGet: method === 'GET',
+      isDevices: pathParts[0] === 'devices',
+      isRegistrations: pathParts[2] === 'registrations',
+      isGetUpdatedPassesList,
+    });
+
     let pass: any = null;
 
     // Only require authentication for endpoints that need it
     if (!isGetUpdatedPassesList) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:57',message:'Auth required - checking header',data:{applePath},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       // Authenticate the request
       const authHeader = request.headers.get('authorization');
       if (!authHeader || !authHeader.startsWith('ApplePass ')) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:60',message:'401 - Missing auth header',data:{applePath,hasAuthHeader:!!authHeader,authHeaderPreview:authHeader?.substring(0,20)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         console.log(`[Apple Web Service] Missing or invalid Authorization header for ${applePath}`);
         return new NextResponse('Unauthorized', { status: 401 });
       }
@@ -74,8 +100,14 @@ async function handleRequest(request: NextRequest, method: string) {
       }
 
       pass = authPass;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:77',message:'Auth successful',data:{serialNumber:pass.serial_number,applePath},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       console.log(`[Apple Web Service] Authenticated - Pass: ${pass.serial_number}, Path: ${applePath}`);
     } else {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:79',message:'No auth required - GET updated passes list',data:{applePath,pathParts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       console.log(`[Apple Web Service] No authentication required for GET /v1/devices/.../registrations/{passTypeID}`);
     }
 
