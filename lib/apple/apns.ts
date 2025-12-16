@@ -57,14 +57,23 @@ export async function sendSilentPush(
 
     // Configure APNs provider - CRITICAL: Wallet passes MUST use production: true
     // Per the guide: "All Apple Wallet passes, regardless of how they are installed, use the PRODUCTION APNs environment."
+    // Try key as Buffer first (more reliable), then string if needed
     const options: any = {
       token: {
-        key: keyValue, // Buffer or string (PEM)
+        key: Buffer.from(keyValue, 'utf-8'), // Convert PEM string to Buffer for reliability
         keyId: appleCredentials.apns_key_id,
         teamId: appleCredentials.team_id,
       },
       production: true, // MUST be true for Wallet passes
     };
+    
+    console.log('[APNs] Provider options:', {
+      keyId: options.token.keyId,
+      teamId: options.token.teamId,
+      production: options.production,
+      keyType: 'Buffer',
+      keyLength: options.token.key.length,
+    });
     
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:28',message:'APNs options configured',data:{keyId:options.token.keyId,teamId:options.token.teamId,production:options.production,keyType:typeof options.token.key,keyLength:options.token.key.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
