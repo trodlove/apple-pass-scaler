@@ -26,6 +26,8 @@
     "node-pushnotifications": "^2.1.1",
     "passkit-generator": "^3.1.8",
     "react": "^18.2.0",
+    "react-color": "^2.19.3",
+    "react-colorful": "^5.6.1",
     "react-dom": "^18.2.0",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",

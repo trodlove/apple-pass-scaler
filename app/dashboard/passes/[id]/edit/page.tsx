@@ -1,15 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Upload, Check, Moon } from 'lucide-react';
+import { ArrowLeft, Check } from 'lucide-react';
 import Link from 'next/link';
-import type { Pass } from '@/lib/types';
+import { usePassEditorStore } from '@/stores/pass-editor-store';
+import { PassPreview } from '@/components/pass-preview';
+import { ImageUpload } from '@/components/image-upload';
+import { ColorPicker } from '@/components/color-picker';
+import { useState } from 'react';
 
 export default function EditPassPage() {
   const params = useParams();
@@ -17,45 +21,15 @@ export default function EditPassPage() {
   const { toast } = useToast();
   const passId = params.id as string;
 
-  const [pass, setPass] = useState<Pass | null>(null);
+  const store = usePassEditorStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
-    // Step 1: Images
-    logo: '',
-    icon: '',
-    stripImage: '',
-    
-    // Step 2: Configuration
-    organizationName: '',
-    description: '',
-    logoText: '',
-    headerLabel: '',
-    headerValue: '',
-    backgroundColor: '#000000',
-    foregroundColor: '#FFFFFF',
-    labelColor: '#666666',
-    
-    // Step 3: Content
-    secondaryLeftLabel: '',
-    secondaryLeftValue: '',
-    secondaryRightLabel: '',
-    secondaryRightValue: '',
-    websiteUrl: '',
-    
-    // Step 4: Back Fields
-    latestNewsText: '',
-    latestNewsLink: '',
-    makeMoneyLink: '',
-    redeemCashLink: '',
-    shareEarnLink: '',
-    notificationMessage: '',
-    customerServiceLink: '',
-  });
+  const [pass, setPass] = useState<any>(null);
 
   useEffect(() => {
     fetchPass();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [passId]);
 
   async function fetchPass() {
@@ -65,34 +39,9 @@ export default function EditPassPage() {
         const data = await response.json();
         setPass(data);
         
-        // Populate form with existing data
+        // Load data into Zustand store
         const passData = data.pass_data || {};
-        setFormData({
-          logo: passData.logo || '',
-          icon: passData.icon || '',
-          stripImage: passData.stripImage || '',
-          organizationName: passData.organizationName || '',
-          description: passData.description || '',
-          logoText: passData.logoText || '',
-          headerLabel: passData.headerLabel || '',
-          headerValue: passData.headerValue || '',
-          backgroundColor: passData.backgroundColor || '#000000',
-          foregroundColor: passData.foregroundColor || '#FFFFFF',
-          labelColor: passData.labelColor || '#666666',
-          secondaryLeftLabel: passData.secondaryLeftLabel || '',
-          secondaryLeftValue: passData.secondaryLeftValue || '',
-          secondaryRightLabel: passData.secondaryRightLabel || '',
-          secondaryRightValue: passData.secondaryRightValue || '',
-          websiteUrl: passData.websiteUrl || '',
-          // Back Fields
-          latestNewsText: passData.latestNewsText || '',
-          latestNewsLink: passData.latestNewsLink || '',
-          makeMoneyLink: passData.makeMoneyLink || '',
-          redeemCashLink: passData.redeemCashLink || '',
-          shareEarnLink: passData.shareEarnLink || '',
-          notificationMessage: passData.notificationMessage || '',
-          customerServiceLink: passData.customerServiceLink || '',
-        });
+        store.loadFromPassData(passData);
       }
     } catch (error) {
       console.error('Error fetching pass:', error);
@@ -109,8 +58,52 @@ export default function EditPassPage() {
   async function handleSave() {
     setSaving(true);
     try {
-      const updatedPassData = {
-        ...formData,
+      // Get all data from Zustand store
+      const passData = {
+        // Images - store all three resolutions
+        logo_1x_url: store.logo_1x_url,
+        logo_2x_url: store.logo_2x_url,
+        logo_3x_url: store.logo_3x_url,
+        icon_1x_url: store.icon_1x_url,
+        icon_2x_url: store.icon_2x_url,
+        icon_3x_url: store.icon_3x_url,
+        strip_1x_url: store.strip_1x_url,
+        strip_2x_url: store.strip_2x_url,
+        strip_3x_url: store.strip_3x_url,
+        
+        // Backward compatibility - use @2x as default
+        logo: store.logo_2x_url || store.logo_1x_url,
+        icon: store.icon_2x_url || store.icon_1x_url,
+        stripImage: store.strip_2x_url || store.strip_1x_url,
+        
+        // Configuration
+        organizationName: store.organizationName,
+        description: store.description,
+        logoText: store.logoText,
+        headerLabel: store.headerLabel,
+        headerValue: store.headerValue,
+        backgroundColor: store.backgroundColor,
+        foregroundColor: store.foregroundColor,
+        labelColor: store.labelColor,
+        
+        // Content
+        secondaryLeftLabel: store.secondaryLeftLabel,
+        secondaryLeftValue: store.secondaryLeftValue,
+        secondaryRightLabel: store.secondaryRightLabel,
+        secondaryRightValue: store.secondaryRightValue,
+        websiteUrl: store.websiteUrl,
+        
+        // Back Fields
+        latestNewsText: store.latestNewsText,
+        latestNewsLink: store.latestNewsLink,
+        makeMoneyLink: store.makeMoneyLink,
+        redeemCashLink: store.redeemCashLink,
+        shareEarnLink: store.shareEarnLink,
+        notificationMessage: store.notificationMessage,
+        customerServiceLink: store.customerServiceLink,
+        
+        // Barcode
+        barcodeMessage: store.barcodeMessage,
       };
 
       const response = await fetch(`/api/passes/${passId}`, {
@@ -119,8 +112,8 @@ export default function EditPassPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          pass_data: updatedPassData,
-          regenerate: true, // Regenerate the pass file
+          pass_data: passData,
+          regenerate: true,
         }),
       });
 
@@ -148,15 +141,6 @@ export default function EditPassPage() {
     } finally {
       setSaving(false);
     }
-  }
-
-  function handleImageUpload(field: 'logo' | 'icon' | 'stripImage', file: File) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = e.target?.result as string;
-      setFormData({ ...formData, [field]: base64 });
-    };
-    reader.readAsDataURL(file);
   }
 
   if (loading) {
@@ -229,143 +213,12 @@ export default function EditPassPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Pass Images</CardTitle>
-                <CardDescription>Upload the images that will appear on your pass.</CardDescription>
+                <CardDescription>Upload the images that will appear on your pass. Images will be automatically resized to Apple&apos;s required dimensions.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Logo */}
-                <div>
-                  <Label htmlFor="logo" className="flex items-center gap-2 mb-2">
-                    Logo
-                    <span className="text-xs text-gray-500">(Required)</span>
-                  </Label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    {formData.logo ? (
-                      <div className="space-y-2">
-                        <img src={formData.logo} alt="Logo" className="max-w-32 max-h-32 mx-auto" />
-                        <p className="text-sm text-gray-600">Current Logo</p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => document.getElementById('logo-upload')?.click()}
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Click to replace
-                        </Button>
-                      </div>
-                    ) : (
-                      <div>
-                        <Upload className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600 mb-2">Click to upload logo</p>
-                        <Button
-                          variant="outline"
-                          onClick={() => document.getElementById('logo-upload')?.click()}
-                        >
-                          Upload Logo
-                        </Button>
-                      </div>
-                    )}
-                    <input
-                      id="logo-upload"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleImageUpload('logo', file);
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* Icon */}
-                <div>
-                  <Label htmlFor="icon" className="flex items-center gap-2 mb-2">
-                    Icon
-                    <span className="text-xs text-gray-500">(Required)</span>
-                  </Label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    {formData.icon ? (
-                      <div className="space-y-2">
-                        <img src={formData.icon} alt="Icon" className="max-w-32 max-h-32 mx-auto" />
-                        <p className="text-sm text-gray-600">Current Icon</p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => document.getElementById('icon-upload')?.click()}
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Click to replace
-                        </Button>
-                      </div>
-                    ) : (
-                      <div>
-                        <Upload className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600 mb-2">Click to upload icon</p>
-                        <Button
-                          variant="outline"
-                          onClick={() => document.getElementById('icon-upload')?.click()}
-                        >
-                          Upload Icon
-                        </Button>
-                      </div>
-                    )}
-                    <input
-                      id="icon-upload"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleImageUpload('icon', file);
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* Strip Image */}
-                <div>
-                  <Label htmlFor="stripImage" className="flex items-center gap-2 mb-2">
-                    Strip Image
-                    <span className="text-xs text-gray-500">(Optional)</span>
-                  </Label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    {formData.stripImage ? (
-                      <div className="space-y-2">
-                        <img src={formData.stripImage} alt="Strip" className="max-w-full max-h-48 mx-auto" />
-                        <p className="text-sm text-gray-600">Current Strip</p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => document.getElementById('strip-upload')?.click()}
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Click to replace
-                        </Button>
-                      </div>
-                    ) : (
-                      <div>
-                        <Upload className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600 mb-2">Click to upload strip image</p>
-                        <Button
-                          variant="outline"
-                          onClick={() => document.getElementById('strip-upload')?.click()}
-                        >
-                          Upload Strip Image
-                        </Button>
-                      </div>
-                    )}
-                    <input
-                      id="strip-upload"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleImageUpload('stripImage', file);
-                      }}
-                    />
-                  </div>
-                </div>
+                <ImageUpload imageType="logo" label="Logo" required />
+                <ImageUpload imageType="icon" label="Icon" required />
+                <ImageUpload imageType="strip" label="Strip Image" />
               </CardContent>
             </Card>
           )}
@@ -382,8 +235,8 @@ export default function EditPassPage() {
                     <Label htmlFor="organizationName">Organization Name</Label>
                     <Input
                       id="organizationName"
-                      value={formData.organizationName}
-                      onChange={(e) => setFormData({ ...formData, organizationName: e.target.value })}
+                      value={store.organizationName}
+                      onChange={(e) => store.setPassProperty('organizationName', e.target.value)}
                       placeholder="Your Organization"
                     />
                     <p className="text-xs text-gray-500">Name of the organization issuing the pass.</p>
@@ -392,8 +245,8 @@ export default function EditPassPage() {
                     <Label htmlFor="description">Pass Description</Label>
                     <Input
                       id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      value={store.description}
+                      onChange={(e) => store.setPassProperty('description', e.target.value)}
                       placeholder="Brief description"
                     />
                     <p className="text-xs text-gray-500">Brief description for accessibility purposes.</p>
@@ -404,8 +257,8 @@ export default function EditPassPage() {
                   <Label htmlFor="logoText">Logo Text</Label>
                   <Input
                     id="logoText"
-                    value={formData.logoText}
-                    onChange={(e) => setFormData({ ...formData, logoText: e.target.value })}
+                    value={store.logoText}
+                    onChange={(e) => store.setPassProperty('logoText', e.target.value)}
                     placeholder="Text next to logo"
                   />
                   <p className="text-xs text-gray-500">Text that appears next to your logo.</p>
@@ -416,8 +269,8 @@ export default function EditPassPage() {
                     <Label htmlFor="headerLabel">Header Field Label</Label>
                     <Input
                       id="headerLabel"
-                      value={formData.headerLabel}
-                      onChange={(e) => setFormData({ ...formData, headerLabel: e.target.value })}
+                      value={store.headerLabel}
+                      onChange={(e) => store.setPassProperty('headerLabel', e.target.value)}
                       placeholder="MEMBER"
                       maxLength={25}
                     />
@@ -427,8 +280,8 @@ export default function EditPassPage() {
                     <Label htmlFor="headerValue">Header Field Value</Label>
                     <Input
                       id="headerValue"
-                      value={formData.headerValue}
-                      onChange={(e) => setFormData({ ...formData, headerValue: e.target.value })}
+                      value={store.headerValue}
+                      onChange={(e) => store.setPassProperty('headerValue', e.target.value)}
                       placeholder="GOLD MEMBER"
                       maxLength={30}
                     />
@@ -437,61 +290,23 @@ export default function EditPassPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <div>
-                    <Label>Colors</Label>
-                    <div className="grid gap-4 md:grid-cols-3 mt-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="backgroundColor" className="text-sm">Background Color</Label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            id="backgroundColor"
-                            value={formData.backgroundColor}
-                            onChange={(e) => setFormData({ ...formData, backgroundColor: e.target.value })}
-                            className="w-16 h-10 rounded border"
-                          />
-                          <Input
-                            value={formData.backgroundColor}
-                            onChange={(e) => setFormData({ ...formData, backgroundColor: e.target.value })}
-                            className="flex-1"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="foregroundColor" className="text-sm">Foreground Color</Label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            id="foregroundColor"
-                            value={formData.foregroundColor}
-                            onChange={(e) => setFormData({ ...formData, foregroundColor: e.target.value })}
-                            className="w-16 h-10 rounded border"
-                          />
-                          <Input
-                            value={formData.foregroundColor}
-                            onChange={(e) => setFormData({ ...formData, foregroundColor: e.target.value })}
-                            className="flex-1"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="labelColor" className="text-sm">Label Color</Label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            id="labelColor"
-                            value={formData.labelColor}
-                            onChange={(e) => setFormData({ ...formData, labelColor: e.target.value })}
-                            className="w-16 h-10 rounded border"
-                          />
-                          <Input
-                            value={formData.labelColor}
-                            onChange={(e) => setFormData({ ...formData, labelColor: e.target.value })}
-                            className="flex-1"
-                          />
-                        </div>
-                      </div>
-                    </div>
+                  <Label>Colors</Label>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <ColorPicker
+                      label="Background Color"
+                      value={store.backgroundColor}
+                      onChange={(color) => store.setPassProperty('backgroundColor', color)}
+                    />
+                    <ColorPicker
+                      label="Foreground Color"
+                      value={store.foregroundColor}
+                      onChange={(color) => store.setPassProperty('foregroundColor', color)}
+                    />
+                    <ColorPicker
+                      label="Label Color"
+                      value={store.labelColor}
+                      onChange={(color) => store.setPassProperty('labelColor', color)}
+                    />
                   </div>
                 </div>
               </CardContent>
@@ -510,23 +325,21 @@ export default function EditPassPage() {
                     <Label htmlFor="secondaryLeftLabel">Secondary Left Label</Label>
                     <Input
                       id="secondaryLeftLabel"
-                      value={formData.secondaryLeftLabel}
-                      onChange={(e) => setFormData({ ...formData, secondaryLeftLabel: e.target.value })}
+                      value={store.secondaryLeftLabel}
+                      onChange={(e) => store.setPassProperty('secondaryLeftLabel', e.target.value)}
                       placeholder="Team"
                       maxLength={25}
                     />
-                    <p className="text-xs text-gray-500">6/25</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="secondaryLeftValue">Secondary Left Value</Label>
                     <Input
                       id="secondaryLeftValue"
-                      value={formData.secondaryLeftValue}
-                      onChange={(e) => setFormData({ ...formData, secondaryLeftValue: e.target.value })}
+                      value={store.secondaryLeftValue}
+                      onChange={(e) => store.setPassProperty('secondaryLeftValue', e.target.value)}
                       placeholder="Engineer"
                       maxLength={30}
                     />
-                    <p className="text-xs text-gray-500">6/30</p>
                   </div>
                 </div>
 
@@ -535,23 +348,21 @@ export default function EditPassPage() {
                     <Label htmlFor="secondaryRightLabel">Secondary Right Label</Label>
                     <Input
                       id="secondaryRightLabel"
-                      value={formData.secondaryRightLabel}
-                      onChange={(e) => setFormData({ ...formData, secondaryRightLabel: e.target.value })}
+                      value={store.secondaryRightLabel}
+                      onChange={(e) => store.setPassProperty('secondaryRightLabel', e.target.value)}
                       placeholder="Status"
                       maxLength={25}
                     />
-                    <p className="text-xs text-gray-500">6/25</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="secondaryRightValue">Secondary Right Value</Label>
                     <Input
                       id="secondaryRightValue"
-                      value={formData.secondaryRightValue}
-                      onChange={(e) => setFormData({ ...formData, secondaryRightValue: e.target.value })}
+                      value={store.secondaryRightValue}
+                      onChange={(e) => store.setPassProperty('secondaryRightValue', e.target.value)}
                       placeholder="Active"
                       maxLength={30}
                     />
-                    <p className="text-xs text-gray-500">6/30</p>
                   </div>
                 </div>
 
@@ -560,8 +371,8 @@ export default function EditPassPage() {
                   <Input
                     id="websiteUrl"
                     type="url"
-                    value={formData.websiteUrl}
-                    onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })}
+                    value={store.websiteUrl}
+                    onChange={(e) => store.setPassProperty('websiteUrl', e.target.value)}
                     placeholder="https://example.com"
                   />
                   <p className="text-xs text-gray-500">This website will be linked on the back of the card.</p>
@@ -577,91 +388,79 @@ export default function EditPassPage() {
                 <CardDescription>Configure the fields and links that appear on the back of your pass.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Latest News */}
                 <div className="space-y-4 p-4 border rounded-lg">
                   <h3 className="font-semibold text-sm">Latest News</h3>
                   <div className="space-y-2">
                     <Label htmlFor="latestNewsText">News Text</Label>
                     <Input
                       id="latestNewsText"
-                      value={formData.latestNewsText}
-                      onChange={(e) => setFormData({ ...formData, latestNewsText: e.target.value })}
+                      value={store.latestNewsText}
+                      onChange={(e) => store.setPassProperty('latestNewsText', e.target.value)}
                       placeholder="Unlock bonuses up to 2X your earnings! Find your new daily bonus here."
                     />
-                    <p className="text-xs text-gray-500">The text that will appear for the latest news field.</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="latestNewsLink">News Link</Label>
                     <Input
                       id="latestNewsLink"
                       type="url"
-                      value={formData.latestNewsLink}
-                      onChange={(e) => setFormData({ ...formData, latestNewsLink: e.target.value })}
+                      value={store.latestNewsLink}
+                      onChange={(e) => store.setPassProperty('latestNewsLink', e.target.value)}
                       placeholder="https://example.com/latest-news"
                     />
-                    <p className="text-xs text-gray-500">The clickable link URL for the latest news.</p>
                   </div>
                 </div>
 
-                {/* Make Money Link */}
                 <div className="space-y-2">
                   <Label htmlFor="makeMoneyLink">Make Money Link</Label>
                   <Input
                     id="makeMoneyLink"
                     type="url"
-                    value={formData.makeMoneyLink}
-                    onChange={(e) => setFormData({ ...formData, makeMoneyLink: e.target.value })}
+                    value={store.makeMoneyLink}
+                    onChange={(e) => store.setPassProperty('makeMoneyLink', e.target.value)}
                     placeholder="https://example.com/make-money"
                   />
-                  <p className="text-xs text-gray-500">Link that appears as "Make Money" on the back of the pass.</p>
                 </div>
 
-                {/* Redeem Cash Link */}
                 <div className="space-y-2">
                   <Label htmlFor="redeemCashLink">Redeem Cash Link</Label>
                   <Input
                     id="redeemCashLink"
                     type="url"
-                    value={formData.redeemCashLink}
-                    onChange={(e) => setFormData({ ...formData, redeemCashLink: e.target.value })}
+                    value={store.redeemCashLink}
+                    onChange={(e) => store.setPassProperty('redeemCashLink', e.target.value)}
                     placeholder="https://example.com/redeem"
                   />
-                  <p className="text-xs text-gray-500">Link that appears as "Redeem Earnings" on the back of the pass.</p>
                 </div>
 
-                {/* Share and Earn Link */}
                 <div className="space-y-2">
                   <Label htmlFor="shareEarnLink">Share and Earn Link</Label>
                   <Input
                     id="shareEarnLink"
                     type="url"
-                    value={formData.shareEarnLink}
-                    onChange={(e) => setFormData({ ...formData, shareEarnLink: e.target.value })}
+                    value={store.shareEarnLink}
+                    onChange={(e) => store.setPassProperty('shareEarnLink', e.target.value)}
                     placeholder="https://example.com/share"
                   />
-                    <p className="text-xs text-gray-500">Link that appears as &quot;Pass the Gravy&quot; on the back of the pass.</p>
                 </div>
 
-                {/* Customer Service Link */}
                 <div className="space-y-2">
                   <Label htmlFor="customerServiceLink">Customer Service Link</Label>
                   <Input
                     id="customerServiceLink"
                     type="url"
-                    value={formData.customerServiceLink}
-                    onChange={(e) => setFormData({ ...formData, customerServiceLink: e.target.value })}
+                    value={store.customerServiceLink}
+                    onChange={(e) => store.setPassProperty('customerServiceLink', e.target.value)}
                     placeholder="https://example.com/support"
                   />
-                  <p className="text-xs text-gray-500">Link that appears as &quot;Get Help&quot; on the back of the pass.</p>
                 </div>
 
-                {/* Notification Message */}
                 <div className="space-y-2 p-4 border rounded-lg bg-blue-50">
                   <Label htmlFor="notificationMessage">Notification Message (Last Update Field)</Label>
                   <Input
                     id="notificationMessage"
-                    value={formData.notificationMessage}
-                    onChange={(e) => setFormData({ ...formData, notificationMessage: e.target.value })}
+                    value={store.notificationMessage}
+                    onChange={(e) => store.setPassProperty('notificationMessage', e.target.value)}
                     placeholder="Welcome! Check back for updates."
                   />
                   <p className="text-xs text-gray-500">
@@ -700,80 +499,7 @@ export default function EditPassPage() {
               <CardTitle>Preview</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="bg-black rounded-lg p-4 mb-4">
-                {/* Pass Preview */}
-                <div
-                  className="rounded-lg p-6 text-white"
-                  style={{
-                    backgroundColor: formData.backgroundColor,
-                    color: formData.foregroundColor,
-                  }}
-                >
-                  {formData.logo && (
-                    <img src={formData.logo} alt="Logo" className="w-12 h-12 mb-2" />
-                  )}
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      {formData.headerLabel && (
-                        <div className="text-sm opacity-80">{formData.headerLabel}</div>
-                      )}
-                      {formData.headerValue && (
-                        <div className="text-lg font-bold">{formData.headerValue}</div>
-                      )}
-                    </div>
-                  </div>
-                  {formData.stripImage && (
-                    <img src={formData.stripImage} alt="Strip" className="w-full mb-4 rounded" />
-                  )}
-                  <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                    {formData.secondaryLeftLabel && (
-                      <div>
-                        <div className="opacity-80">{formData.secondaryLeftLabel}</div>
-                        <div className="font-semibold">{formData.secondaryLeftValue}</div>
-                      </div>
-                    )}
-                    {formData.secondaryRightLabel && (
-                      <div>
-                        <div className="opacity-80">{formData.secondaryRightLabel}</div>
-                        <div className="font-semibold">{formData.secondaryRightValue}</div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="bg-white/20 rounded p-2 text-center">
-                    <div className="text-xs">QR Code Placeholder</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Notification Preview */}
-              <div className="mt-6">
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Notification Preview</Label>
-                  <button className="text-xs text-gray-500 flex items-center gap-1">
-                    <Moon className="h-3 w-3" />
-                    Dark
-                  </button>
-                </div>
-                <div className="bg-white border rounded-lg p-4 shadow-sm">
-                  <div className="flex items-start gap-3">
-                    {formData.icon && (
-                      <img src={formData.icon} alt="Icon" className="w-10 h-10 rounded" />
-                    )}
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-sm">{formData.organizationName || 'TEST'}</span>
-                        <span className="text-xs text-gray-500">
-                          {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-700">
-                        Welcome to {formData.organizationName || 'TEST'}! Tap to view your exclusive offers and rewards.
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2 text-center">iOS Lock Screen Preview</p>
-                </div>
-              </div>
+              <PassPreview />
             </CardContent>
           </Card>
         </div>
