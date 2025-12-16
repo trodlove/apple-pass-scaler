@@ -96,17 +96,21 @@ export async function sendSilentPush(
       const failedDevice = result.failed[0];
       const errorReason = failedDevice.response?.reason || 'Unknown error';
       const errorStatus = failedDevice.status;
-      console.error('[APNs] Failed Notification:', {
+      const errorDetails = {
         device: failedDevice.device,
         status: errorStatus,
         response: failedDevice.response,
         reason: errorReason,
-      });
+      };
+      console.error('[APNs] Failed Notification:', errorDetails);
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:57',message:'Notification failed',data:{reason:errorReason,device:String(failedDevice.device||'unknown'),status:errorStatus,fullResponse:JSON.stringify(failedDevice.response)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
       // #endregion
-      // Throw error with details so caller can see it
-      throw new Error(`APNs failed: ${errorReason} (status: ${errorStatus})`);
+      // Create detailed error message
+      const errorMessage = `APNs failed: ${errorReason}${errorStatus ? ` (status: ${errorStatus})` : ''}`;
+      const error = new Error(errorMessage) as Error & { apnsDetails?: any };
+      error.apnsDetails = errorDetails;
+      throw error;
     }
 
     if (result.sent.length > 0) {

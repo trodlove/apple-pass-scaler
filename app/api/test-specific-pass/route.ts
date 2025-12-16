@@ -143,10 +143,23 @@ export async function POST(request: NextRequest) {
     };
 
     // Send push notifications
-    const result = await sendSilentPushToMultiple(pushTokens, credentials);
-    const success = result.success;
-    const failed = result.failed;
-    const errorDetails = result.errors;
+    let result;
+    let success = 0;
+    let failed = 0;
+    let errorDetails: string[] | undefined;
+    try {
+      result = await sendSilentPushToMultiple(pushTokens, credentials);
+      success = result.success;
+      failed = result.failed;
+      errorDetails = result.errors;
+    } catch (error: any) {
+      console.error('[Test Specific Pass] Error sending notifications:', error);
+      failed = pushTokens.length;
+      errorDetails = [error.message || 'Unknown error'];
+      if (error.apnsDetails) {
+        errorDetails.push(`APNs Details: ${JSON.stringify(error.apnsDetails)}`);
+      }
+    }
 
     // Get detailed error info from console logs if available
     // The actual error will be in Vercel logs, but we can return what we know
@@ -170,7 +183,8 @@ export async function POST(request: NextRequest) {
           teamId: credentials.team_id,
           passTypeId: credentials.pass_type_id,
         },
-        errorDetails,
+        errorDetails: errorDetails || [],
+        apnsError: errorDetails?.[0] || 'No error details',
         note: 'Check Vercel logs for detailed APNs error (BadEnvironmentKeyInToken, etc.)',
       },
     }, { status: success > 0 ? 200 : 500 });
