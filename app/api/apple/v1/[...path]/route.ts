@@ -644,7 +644,7 @@ async function handleGetUpdatedPasses(
           passesUpdatedSince: passesUpdatedSince || 'none',
           serialNumbersCount: serialNumbers.length,
           serialNumbers,
-          registrationsCount: registrations?.length || 0,
+          allRegistrationsCount: allSerialNumbers.length,
         },
         level: serialNumbers.length > 0 ? 'info' : 'warn',
       }),
