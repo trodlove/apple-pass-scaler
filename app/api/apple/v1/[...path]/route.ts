@@ -550,10 +550,12 @@ async function handleGetUpdatedPasses(
       passesUpdatedSince: passesUpdatedSince || 'none (returning all passes)',
     });
 
+    // CRITICAL FIX: When passesUpdatedSince is NOT provided, iOS is checking for updates after a push
+    // We should return passes updated in the last 5 minutes to ensure iOS fetches the updated pass
+    // This prevents iOS from skipping passes it thinks it already has
     if (passesUpdatedSince) {
       // Filter by last_updated_at - only return passes updated since the given timestamp
       // CRITICAL: Use gte (greater than or equal) to include passes updated at the exact timestamp
-      // This handles edge cases where the timestamp matches exactly
       query = query.gte('passes.last_updated_at', passesUpdatedSince);
       console.log('[GET /v1/devices/.../registrations] Filtering by passesUpdatedSince:', passesUpdatedSince);
       
@@ -568,15 +570,19 @@ async function handleGetUpdatedPasses(
         }),
       }).catch(() => {});
     } else {
-      console.log('[GET /v1/devices/.../registrations] No passesUpdatedSince - returning all passes for device');
+      // No passesUpdatedSince - this means iOS is checking after receiving a push
+      // Return passes updated in the last 5 minutes to ensure iOS fetches recently updated passes
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      query = query.gte('passes.last_updated_at', fiveMinutesAgo);
+      console.log('[GET /v1/devices/.../registrations] No passesUpdatedSince - returning passes updated in last 5 minutes:', fiveMinutesAgo);
       
       // Log to database
       await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          event: '[GET /v1/devices/.../registrations] No passesUpdatedSince - returning all passes',
-          data: { deviceID, passTypeID },
+          event: '[GET /v1/devices/.../registrations] No passesUpdatedSince - filtering by last 5 minutes',
+          data: { deviceID, passTypeID, fiveMinutesAgo },
           level: 'info',
         }),
       }).catch(() => {});
