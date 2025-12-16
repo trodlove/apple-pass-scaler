@@ -339,12 +339,63 @@ async function handleGetPass(
   try {
     // Parse path: passes/{passTypeID}/{serialNumber}
     const pathParts = path.split('/');
+    const passTypeID = pathParts[1];
     const serialNumber = pathParts[2];
 
-    // Verify serial number matches
-    if (pass.serial_number !== serialNumber) {
-      return new NextResponse('Forbidden', { status: 403 });
+    // Log that this endpoint was called - CRITICAL for debugging
+    console.log('[GET /v1/passes] Request received:', {
+      passTypeID,
+      serialNumber,
+      timestamp: new Date().toISOString(),
+      userAgent: request.headers.get('user-agent')?.substring(0, 50),
+    });
+    
+    await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: '[GET /v1/passes] Request received',
+        data: { passTypeID, serialNumber },
+        level: 'info',
+      }),
+    }).catch(() => {});
+
+    // Find pass by serial number (don't rely on authenticated pass object)
+    const { data: foundPass, error: passError } = await supabaseAdmin
+      .from('passes')
+      .select('*')
+      .eq('serial_number', serialNumber)
+      .single();
+
+    if (passError || !foundPass) {
+      console.log('[GET /v1/passes] Pass not found:', { serialNumber, error: passError?.message });
+      await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: '[GET /v1/passes] Pass not found',
+          data: { serialNumber, error: passError?.message },
+          level: 'error',
+        }),
+      }).catch(() => {});
+      return new NextResponse('Not Found', { status: 404 });
     }
+
+    // Verify passTypeID matches
+    if (foundPass.apple_account_id) {
+      const account = await getAppleAccountById(foundPass.apple_account_id);
+      if (account && account.pass_type_id !== passTypeID) {
+        console.log('[GET /v1/passes] PassTypeID mismatch:', { 
+          expected: passTypeID, 
+          actual: account.pass_type_id,
+          serialNumber,
+        });
+        return new NextResponse('Forbidden', { status: 403 });
+      }
+    }
+    
+    // Use foundPass instead of authenticated pass
+    pass = foundPass;
 
     // Get template and account
     const [template, account] = await Promise.all([
