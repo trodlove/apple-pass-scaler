@@ -36,6 +36,17 @@ async function handleRequest(request: NextRequest, method: string) {
     // Log all incoming requests for debugging
     console.log(`[Apple Web Service] ${method} ${applePath} - User-Agent: ${request.headers.get('user-agent')?.substring(0, 50)}`);
     console.log(`[Apple Web Service] Full pathname: ${request.nextUrl.pathname}, Query: ${request.nextUrl.search}`);
+    
+    // Also log directly to database for guaranteed visibility
+    await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: `[Apple Web Service] ${method} ${applePath}`,
+        data: { method, applePath, fullPath: request.nextUrl.pathname, query: request.nextUrl.search, userAgent: request.headers.get('user-agent')?.substring(0, 50) },
+        level: 'info',
+      }),
+    }).catch(() => {});
 
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:35',message:'Request received',data:{method,applePath,pathSegments:pathSegments.join('/'),fullPath:request.nextUrl.pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
@@ -91,6 +102,18 @@ async function handleRequest(request: NextRequest, method: string) {
         // #endregion
         console.log(`[Apple Web Service] Missing or invalid Authorization header for ${applePath}`);
         console.log(`[Apple Web Service] isGetUpdatedPassesList was: ${isGetUpdatedPassesList}, method: ${method}, pathParts: ${JSON.stringify(pathParts)}`);
+        
+        // Log 401 error to database
+        await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: `[Apple Web Service] 401 Unauthorized - ${method} ${applePath}`,
+            data: { method, applePath, isGetUpdatedPassesList, pathParts, hasAuthHeader: !!request.headers.get('authorization') },
+            level: 'error',
+          }),
+        }).catch(() => {});
+        
         return new NextResponse('Unauthorized', { status: 401 });
       }
 
@@ -119,6 +142,17 @@ async function handleRequest(request: NextRequest, method: string) {
       // #endregion
       console.log(`[DEBUG] NO AUTH REQUIRED - isGetUpdatedPassesList=true for path: ${applePath}, pathParts: ${JSON.stringify(pathParts)}`);
       console.log(`[Apple Web Service] No authentication required for GET /v1/devices/.../registrations/{passTypeID}`);
+      
+      // Log successful auth bypass to database
+      await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: `[Apple Web Service] Auth bypass successful - GET ${applePath}`,
+          data: { method, applePath, pathParts, isGetUpdatedPassesList: true },
+          level: 'info',
+        }),
+      }).catch(() => {});
     }
 
     // Route to appropriate handler based on path and method
