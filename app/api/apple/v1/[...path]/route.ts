@@ -161,6 +161,17 @@ async function handleRequest(request: NextRequest, method: string) {
     } else if (method === 'DELETE' && applePath.startsWith('devices/') && applePath.includes('/registrations/')) {
       return handleUnregisterDevice(request, applePath, pass!);
     } else if (method === 'GET' && applePath.startsWith('passes/')) {
+      // Log BEFORE calling handleGetPass to see if route is even being hit
+      console.log('[Apple Web Service] Routing to handleGetPass:', { applePath, hasPass: !!pass });
+      await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: '[Apple Web Service] Routing to handleGetPass',
+          data: { applePath, hasPass: !!pass, method },
+          level: 'info',
+        }),
+      }).catch(() => {});
       return handleGetPass(request, applePath, pass!);
     } else if (isGetUpdatedPassesList) {
       // This endpoint doesn't need a pass object, but we need to extract passTypeID from path
@@ -169,6 +180,17 @@ async function handleRequest(request: NextRequest, method: string) {
       return handleLog(request, applePath, pass!);
     }
 
+    // Log 404s
+    console.log('[Apple Web Service] 404 - No route matched:', { method, applePath });
+    await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: '[Apple Web Service] 404 - No route matched',
+        data: { method, applePath },
+        level: 'warn',
+      }),
+    }).catch(() => {});
     return new NextResponse('Not Found', { status: 404 });
   } catch (error) {
     console.error('Error in Apple Web Service:', error);
