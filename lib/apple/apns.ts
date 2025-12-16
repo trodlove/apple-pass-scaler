@@ -24,30 +24,31 @@ export async function sendSilentPush(
     }
 
     // Prepare APNs auth key
-    // Per the guide: key can be stored as base64 or PEM
-    // The apn library accepts key as Buffer or string (PEM)
-    // Try Buffer for better reliability
+    // Per the guide: if stored as base64, decode: Buffer.from(key, "base64").toString("ascii")
+    // We store as PEM, so use directly as string
+    // The apn library accepts key as string (PEM) or Buffer
+    // Per guide example: key is passed as string (PEM) after decoding from base64
     let authKey = appleCredentials.apns_auth_key.trim();
     let keyValue: Buffer | string;
     
-    // If key has BEGIN/END markers, it's PEM format - convert to Buffer
+    // If key has BEGIN/END markers, it's PEM format - use as string
     if (authKey.includes('BEGIN') && authKey.includes('END')) {
-      keyValue = Buffer.from(authKey, 'utf-8');
-      console.log('[APNs] Using PEM key as Buffer');
+      keyValue = authKey; // Use PEM string directly
+      console.log('[APNs] Using PEM key as string');
     } else {
-      // Might be base64 - decode it to Buffer
+      // Might be base64 - decode it to PEM string (per guide: Buffer.from(key, "base64").toString("ascii"))
       try {
-        keyValue = Buffer.from(authKey, 'base64');
-        console.log('[APNs] Decoded key from base64 to Buffer');
+        keyValue = Buffer.from(authKey, 'base64').toString('ascii');
+        console.log('[APNs] Decoded key from base64 to PEM string');
       } catch (e) {
-        // Not base64, try as PEM string directly
+        // Not base64, use as-is (assuming PEM)
         keyValue = authKey;
         console.log('[APNs] Using key as string (assuming PEM)');
       }
     }
     
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:20',message:'Auth key prepared',data:{keyLength:authKey.length,keyType:keyValue instanceof Buffer?'Buffer':'string',keyValueLength:keyValue instanceof Buffer?keyValue.length:keyValue.length,hasBegin:authKey.includes('BEGIN'),hasEnd:authKey.includes('END')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'lib/apple/apns.ts:20',message:'Auth key prepared',data:{keyLength:authKey.length,keyType:typeof keyValue,keyValueLength:String(keyValue).length,hasBegin:authKey.includes('BEGIN'),hasEnd:authKey.includes('END')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
 
     // Configure APNs provider - CRITICAL: Wallet passes MUST use production: true
