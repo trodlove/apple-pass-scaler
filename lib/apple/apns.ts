@@ -152,19 +152,8 @@ export async function sendSilentPushToMultiple(
 
   const results = await Promise.allSettled(
     pushTokens.map(async (token) => {
-      try {
-        return await sendSilentPush(token, appleCredentials);
-      } catch (error: any) {
-        console.error(`[APNs] Error sending to token ${token.substring(0, 20)}...:`, error);
-        // Re-throw with error details so caller can see it
-        const errorMessage = error.message || 'Unknown error';
-        const apnsError = new Error(errorMessage) as Error & { apnsDetails?: any; originalError?: any };
-        if (error.apnsDetails) {
-          apnsError.apnsDetails = error.apnsDetails;
-        }
-        apnsError.originalError = error;
-        throw apnsError;
-      }
+      // Don't catch - let errors propagate so we can see them
+      return await sendSilentPush(token, appleCredentials);
     })
   );
   // #region agent log
