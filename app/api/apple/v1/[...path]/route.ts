@@ -45,11 +45,12 @@ async function handleRequest(request: NextRequest, method: string) {
     // Per Apple docs: "All requests (except for getting the list of updatable passes) are authenticated"
     // Check if this is the GET /v1/devices/{deviceID}/registrations/{passTypeID} endpoint
     // Path format: devices/{deviceID}/registrations/{passTypeID}
-    const pathParts = applePath.split('/');
+    const pathParts = applePath.split('/').filter(p => p.length > 0); // Filter empty strings
     const isGetUpdatedPassesList = method === 'GET' && 
       pathParts.length === 4 && 
       pathParts[0] === 'devices' && 
-      pathParts[2] === 'registrations';
+      pathParts[2] === 'registrations' &&
+      !pathParts[3].includes('/'); // Ensure passTypeID doesn't contain slashes (not a serial number)
 
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:50',message:'Path analysis',data:{pathParts,pathPartsLength:pathParts.length,isGet:method==='GET',isDevices:pathParts[0]==='devices',isRegistrations:pathParts[2]==='registrations',isGetUpdatedPassesList},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
