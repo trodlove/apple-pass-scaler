@@ -11,6 +11,7 @@ import { ArrowLeft, Check } from 'lucide-react';
 import Link from 'next/link';
 import { usePassEditorStore } from '@/stores/pass-editor-store';
 import { PassPreview } from '@/components/pass-preview';
+import { BackOfPassPreview } from '@/components/back-of-pass-preview';
 import { ImageUpload } from '@/components/image-upload';
 import { ColorPicker } from '@/components/color-picker';
 import { useState } from 'react';
@@ -500,6 +501,11 @@ export default function EditPassPage() {
             </CardHeader>
             <CardContent>
               <PassPreview />
+              {currentStep === 4 && (
+                <div className="mt-6">
+                  <BackOfPassPreview />
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -22,6 +22,11 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
   const backgroundColor = passData?.backgroundColor || '#000000';
   const foregroundColor = passData?.foregroundColor || '#FFFFFF';
   const labelColor = passData?.labelColor || '#CCCCCC';
+  
+  // Get image URLs (prefer @2x, fallback to @1x, then old format)
+  const logoUrl = passData?.logo_2x_url || passData?.logo_1x_url || passData?.logo || '';
+  const iconUrl = passData?.icon_2x_url || passData?.icon_1x_url || passData?.icon || '';
+  const stripUrl = passData?.strip_2x_url || passData?.strip_1x_url || passData?.stripImage || '';
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -34,13 +39,26 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
           minHeight: '200px',
         }}
       >
-        {/* Logo/Icon */}
-        {passData?.icon && !imageError && (
+        {/* Logo */}
+        {logoUrl && !imageError && (
           <div className="absolute top-4 left-4">
             <img
-              src={passData.icon}
+              src={logoUrl}
+              alt="Logo"
+              className="h-8 w-auto"
+              style={{ maxWidth: '120px' }}
+              onError={() => setImageError(true)}
+            />
+          </div>
+        )}
+        
+        {/* Icon (for notification) */}
+        {iconUrl && !imageError && (
+          <div className="absolute top-4 left-4" style={{ marginTop: logoUrl ? '40px' : '0' }}>
+            <img
+              src={iconUrl}
               alt="Icon"
-              className="w-12 h-12 rounded"
+              className="w-10 h-10 rounded"
               onError={() => setImageError(true)}
             />
           </div>
@@ -59,10 +77,10 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
         </div>
 
         {/* Strip Image */}
-        {passData?.stripImage && (
+        {stripUrl && (
           <div className="absolute top-20 left-0 right-0 h-32">
             <img
-              src={passData.stripImage}
+              src={stripUrl}
               alt="Strip"
               className="w-full h-full object-cover"
             />

@@ -39,10 +39,21 @@ export default function PassesPage() {
   }
 
   function handleShare(pass: Pass) {
-    // TODO: Implement share functionality
-    toast({
-      title: 'Share',
-      description: 'Share functionality coming soon',
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://apple-pass-scaler.vercel.app';
+    const shareUrl = `${baseUrl}/share/${pass.id}`;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      toast({
+        title: 'Share Link Copied',
+        description: 'Link copied to clipboard! Share this URL to test the pass on your phone.',
+      });
+    }).catch(() => {
+      // Fallback: show the URL
+      toast({
+        title: 'Share Link',
+        description: shareUrl,
+      });
     });
   }
 
