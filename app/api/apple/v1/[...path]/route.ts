@@ -36,40 +36,61 @@ async function handleRequest(request: NextRequest, method: string) {
     // Log all incoming requests for debugging
     console.log(`[Apple Web Service] ${method} ${applePath} - User-Agent: ${request.headers.get('user-agent')?.substring(0, 50)}`);
 
-    // Authenticate the request
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('ApplePass ')) {
-      console.log(`[Apple Web Service] Missing or invalid Authorization header`);
-      return new NextResponse('Unauthorized', { status: 401 });
+    // CRITICAL: GET /v1/devices/{deviceID}/registrations/{passTypeID} does NOT require authentication
+    // Per Apple docs: "All requests (except for getting the list of updatable passes) are authenticated"
+    const isGetUpdatedPasses = method === 'GET' && applePath.startsWith('devices/') && applePath.includes('/registrations/') && !applePath.includes('/registrations/') || applePath.split('/').length === 4;
+    
+    // Check if this is the GET /v1/devices/{deviceID}/registrations/{passTypeID} endpoint
+    // Path format: devices/{deviceID}/registrations/{passTypeID}
+    const pathParts = applePath.split('/');
+    const isGetUpdatedPassesList = method === 'GET' && 
+      pathParts.length === 4 && 
+      pathParts[0] === 'devices' && 
+      pathParts[2] === 'registrations';
+
+    let pass: any = null;
+
+    // Only require authentication for endpoints that need it
+    if (!isGetUpdatedPassesList) {
+      // Authenticate the request
+      const authHeader = request.headers.get('authorization');
+      if (!authHeader || !authHeader.startsWith('ApplePass ')) {
+        console.log(`[Apple Web Service] Missing or invalid Authorization header for ${applePath}`);
+        return new NextResponse('Unauthorized', { status: 401 });
+      }
+
+      const authenticationToken = authHeader.substring('ApplePass '.length);
+
+      // Validate authentication token
+      const { data: authPass, error: authError } = await supabaseAdmin
+        .from('passes')
+        .select('*')
+        .eq('authentication_token', authenticationToken)
+        .single();
+
+      if (authError || !authPass) {
+        console.log(`[Apple Web Service] Authentication failed - token: ${authenticationToken.substring(0, 10)}...`);
+        return new NextResponse('Unauthorized', { status: 401 });
+      }
+
+      pass = authPass;
+      console.log(`[Apple Web Service] Authenticated - Pass: ${pass.serial_number}, Path: ${applePath}`);
+    } else {
+      console.log(`[Apple Web Service] No authentication required for GET /v1/devices/.../registrations/{passTypeID}`);
     }
-
-    const authenticationToken = authHeader.substring('ApplePass '.length);
-
-    // Validate authentication token
-    const { data: pass, error: authError } = await supabaseAdmin
-      .from('passes')
-      .select('*')
-      .eq('authentication_token', authenticationToken)
-      .single();
-
-    if (authError || !pass) {
-      console.log(`[Apple Web Service] Authentication failed - token: ${authenticationToken.substring(0, 10)}...`);
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    console.log(`[Apple Web Service] Authenticated - Pass: ${pass.serial_number}, Path: ${applePath}`);
 
     // Route to appropriate handler based on path and method
     if (method === 'POST' && applePath.startsWith('devices/') && applePath.includes('/registrations/')) {
-      return handleRegisterDevice(request, applePath, pass);
+      return handleRegisterDevice(request, applePath, pass!);
     } else if (method === 'DELETE' && applePath.startsWith('devices/') && applePath.includes('/registrations/')) {
-      return handleUnregisterDevice(request, applePath, pass);
+      return handleUnregisterDevice(request, applePath, pass!);
     } else if (method === 'GET' && applePath.startsWith('passes/')) {
-      return handleGetPass(request, applePath, pass);
-    } else if (method === 'GET' && applePath.startsWith('devices/') && applePath.includes('/registrations/')) {
-      return handleGetUpdatedPasses(request, applePath, pass);
+      return handleGetPass(request, applePath, pass!);
+    } else if (isGetUpdatedPassesList) {
+      // This endpoint doesn't need a pass object, but we need to extract passTypeID from path
+      return handleGetUpdatedPasses(request, applePath, null);
     } else if (method === 'POST' && applePath === 'log') {
-      return handleLog(request, applePath, pass);
+      return handleLog(request, applePath, pass!);
     }
 
     return new NextResponse('Not Found', { status: 404 });
@@ -345,12 +366,13 @@ async function handleGetPass(
 async function handleGetUpdatedPasses(
   request: NextRequest,
   path: string,
-  pass: any
+  pass: any // Can be null for this endpoint - no auth required
 ) {
   try {
     // Parse path: devices/{deviceID}/registrations/{passTypeID}
     const pathParts = path.split('/');
     const deviceID = pathParts[1];
+    const passTypeID = pathParts[3]; // Extract passTypeID from path
 
     // Get passesUpdatedSince query parameter
     const passesUpdatedSince = request.nextUrl.searchParams.get('passesUpdatedSince');
@@ -368,10 +390,27 @@ async function handleGetUpdatedPasses(
 
     // Get all passes registered to this device that have been updated since the timestamp
     // CRITICAL: This endpoint is called by iOS after receiving a silent push to check which passes need updating
+    // Filter by passTypeID to only return passes matching the requested type
+    // First, get the apple_account_id for this passTypeID
+    const { data: account, error: accountError } = await supabaseAdmin
+      .from('apple_developer_accounts')
+      .select('id')
+      .eq('pass_type_id', passTypeID)
+      .eq('status', 'ACTIVE')
+      .limit(1)
+      .single();
+
+    if (accountError || !account) {
+      console.log(`[GET /v1/devices/.../registrations] No active account found for passTypeID: ${passTypeID}`);
+      return NextResponse.json([], { status: 200 });
+    }
+
+    // Get all passes registered to this device for this passTypeID that have been updated since the timestamp
     let query = supabaseAdmin
       .from('registrations')
-      .select('pass_id, passes!inner(serial_number, last_updated_at)')
-      .eq('device_id', device.id);
+      .select('pass_id, passes!inner(serial_number, last_updated_at, apple_account_id)')
+      .eq('device_id', device.id)
+      .eq('passes.apple_account_id', account.id);
 
     if (passesUpdatedSince) {
       // Filter by last_updated_at - only return passes updated since the given timestamp
