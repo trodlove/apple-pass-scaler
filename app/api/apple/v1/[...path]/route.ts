@@ -561,9 +561,22 @@ async function handleGetUpdatedPasses(
     }
 
     // Extract serial numbers
-    const serialNumbers = registrations
+    let serialNumbers = registrations
       ?.map((reg: any) => reg.passes?.serial_number)
       .filter((sn: string) => sn) || [];
+    
+    // TEMPORARY DEBUG: If no serial numbers found but we have registrations, log the structure
+    if (serialNumbers.length === 0 && registrations && registrations.length > 0) {
+      const firstReg = registrations[0];
+      const hasPasses = !!firstReg?.passes;
+      const hasSerialNumber = !!(firstReg?.passes as any)?.serial_number;
+      console.error('[GET /v1/devices/.../registrations] DEBUG: Has registrations but no serial numbers!', {
+        registrationsCount: registrations.length,
+        firstRegistration: JSON.stringify(firstReg),
+        passesStructure: hasPasses ? 'exists' : 'missing',
+        serialNumberPath: hasSerialNumber ? 'found' : 'missing',
+      });
+    }
 
     // Log for debugging - this is called when iOS checks for updated passes after silent push
     console.log('[GET /v1/devices/.../registrations] Device checking for updated passes:', {
