@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/logs/drain
  * Receives logs from Vercel Log Drains
