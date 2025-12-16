@@ -554,14 +554,22 @@ async function handleGetUpdatedPasses(
       return NextResponse.json([], { status: 200 });
     }
 
-    // Get all passes registered to this device for this passTypeID that have been updated since the timestamp
-    // CRITICAL: If passesUpdatedSince is provided, only return passes updated AFTER that timestamp
-    // If not provided, return ALL passes for this device (iOS will then fetch each one and compare)
-    let query = supabaseAdmin
+    // CRITICAL FIX: Get all serial numbers for this device registration first
+    // Then filter by last_modified if passesUpdatedSince is provided
+    const { data: allRegistrations, error: allRegError } = await supabaseAdmin
       .from('registrations')
-      .select('pass_id, passes!inner(serial_number, last_updated_at, apple_account_id, pass_data)')
+      .select('pass_id, passes!inner(serial_number, last_modified, apple_account_id)')
       .eq('device_id', device.id)
       .eq('passes.apple_account_id', account.id);
+
+    if (allRegError || !allRegistrations) {
+      console.log('[GET /v1/devices/.../registrations] No registrations found');
+      return NextResponse.json({ serialNumbers: [], lastUpdated: new Date().toISOString() }, { status: 200 });
+    }
+
+    const allSerialNumbers = allRegistrations
+      .map((reg: any) => reg.passes?.serial_number)
+      .filter((sn: string) => sn);
 
     // Log query parameters
     console.log('[GET /v1/devices/.../registrations] Query parameters:', {
@@ -570,92 +578,48 @@ async function handleGetUpdatedPasses(
       passTypeID,
       accountId: account.id,
       passesUpdatedSince: passesUpdatedSince || 'none (returning all passes)',
+      allSerialNumbersCount: allSerialNumbers.length,
     });
 
-    // CRITICAL FIX: When passesUpdatedSince is NOT provided, iOS is checking for updates after a push
-    // We should return passes updated in the last 5 minutes to ensure iOS fetches the updated pass
-    // This prevents iOS from skipping passes it thinks it already has
-    if (passesUpdatedSince) {
-      // Filter by last_updated_at - only return passes updated since the given timestamp
-      // CRITICAL: Use gte (greater than or equal) to include passes updated at the exact timestamp
-      query = query.gte('passes.last_updated_at', passesUpdatedSince);
-      console.log('[GET /v1/devices/.../registrations] Filtering by passesUpdatedSince:', passesUpdatedSince);
-      
-      // Log to database
-      await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event: '[GET /v1/devices/.../registrations] Filtering by passesUpdatedSince',
-          data: { deviceID, passTypeID, passesUpdatedSince },
-          level: 'info',
-        }),
-      }).catch(() => {});
-    } else {
-      // No passesUpdatedSince - this means iOS is checking after receiving a push
-      // Return passes updated in the last 5 minutes to ensure iOS fetches recently updated passes
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      query = query.gte('passes.last_updated_at', fiveMinutesAgo);
-      console.log('[GET /v1/devices/.../registrations] No passesUpdatedSince - returning passes updated in last 5 minutes:', fiveMinutesAgo);
-      
-      // Log to database
-      await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event: '[GET /v1/devices/.../registrations] No passesUpdatedSince - filtering by last 5 minutes',
-          data: { deviceID, passTypeID, fiveMinutesAgo },
-          level: 'info',
-        }),
-      }).catch(() => {});
+    // CRITICAL FIX: If no passesUpdatedSince tag, return ALL serial numbers for this device
+    // This is what iOS expects when checking for updates after a push
+    if (!passesUpdatedSince) {
+      console.log('[GET /v1/devices/.../registrations] No passesUpdatedSince - returning ALL serial numbers:', allSerialNumbers);
+      return NextResponse.json({
+        serialNumbers: allSerialNumbers,
+        lastUpdated: new Date().toISOString(),
+      }, { status: 200 });
     }
 
-    const { data: registrations, error: regError } = await query;
+    // CRITICAL FIX: If passesUpdatedSince IS provided, find which passes have been modified since that timestamp
+    // passesUpdatedSince is a Unix timestamp (seconds), convert to ISO string for database comparison
+    const passesUpdatedSinceDate = new Date(parseInt(passesUpdatedSince) * 1000).toISOString();
     
-    // Log query results
-    const sampleReg = registrations && registrations.length > 0 ? registrations[0] : null;
-    console.log('[GET /v1/devices/.../registrations] Query results:', {
-      registrationsCount: registrations?.length || 0,
-      hasError: !!regError,
-      errorMessage: regError?.message,
-      sampleRegistration: sampleReg ? {
-        passId: sampleReg.pass_id,
-        serialNumber: (sampleReg.passes as any)?.serial_number,
-        lastUpdatedAt: (sampleReg.passes as any)?.last_updated_at,
-      } : null,
+    const { data: updatedPasses, error: passError } = await supabaseAdmin
+      .from('passes')
+      .select('serial_number')
+      .in('serial_number', allSerialNumbers)
+      .gt('last_modified', passesUpdatedSinceDate);
+
+    if (passError) {
+      console.error('[GET /v1/devices/.../registrations] Error fetching updated passes:', passError);
+      return NextResponse.json({ serialNumbers: [], lastUpdated: new Date().toISOString() }, { status: 200 });
+    }
+
+    const updatedSerialNumbers = updatedPasses?.map((p: any) => p.serial_number) || [];
+    
+    console.log('[GET /v1/devices/.../registrations] Filtering by passesUpdatedSince:', {
+      passesUpdatedSince,
+      passesUpdatedSinceDate,
+      allSerialNumbersCount: allSerialNumbers.length,
+      updatedSerialNumbersCount: updatedSerialNumbers.length,
+      updatedSerialNumbers,
     });
-
-    if (regError) {
-      console.error('[GET /v1/devices/.../registrations] Error fetching registrations:', regError);
-      await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event: '[GET /v1/devices/.../registrations] Error fetching registrations',
-          data: { deviceID, passTypeID, passesUpdatedSince, error: regError.message },
-          level: 'error',
-        }),
-      }).catch(() => {});
-      return new NextResponse('Internal Server Error', { status: 500 });
-    }
-
-    // Extract serial numbers
-    let serialNumbers = registrations
-      ?.map((reg: any) => reg.passes?.serial_number)
-      .filter((sn: string) => sn) || [];
     
-    // TEMPORARY DEBUG: If no serial numbers found but we have registrations, log the structure
-    if (serialNumbers.length === 0 && registrations && registrations.length > 0) {
-      const firstReg = registrations[0];
-      const hasPasses = !!firstReg?.passes;
-      const hasSerialNumber = !!(firstReg?.passes as any)?.serial_number;
-      console.error('[GET /v1/devices/.../registrations] DEBUG: Has registrations but no serial numbers!', {
-        registrationsCount: registrations.length,
-        firstRegistration: JSON.stringify(firstReg),
-        passesStructure: hasPasses ? 'exists' : 'missing',
-        serialNumberPath: hasSerialNumber ? 'found' : 'missing',
-      });
-    }
+    // Use updatedSerialNumbers for the rest of the logic
+    const serialNumbers = updatedSerialNumbers;
+
+    // serialNumbers is already set above based on whether passesUpdatedSince was provided
 
     // Log for debugging - this is called when iOS checks for updated passes after silent push
     console.log('[GET /v1/devices/.../registrations] Device checking for updated passes:', {
@@ -664,7 +628,7 @@ async function handleGetUpdatedPasses(
       passesUpdatedSince: passesUpdatedSince || 'none (all passes)',
       updatedPassesCount: serialNumbers.length,
       serialNumbers: serialNumbers,
-      registrationsCount: registrations?.length || 0,
+      allRegistrationsCount: allSerialNumbers.length,
       timestamp: new Date().toISOString(),
     });
     
@@ -686,60 +650,14 @@ async function handleGetUpdatedPasses(
       }),
     }).catch(() => {});
 
-    // CRITICAL: If no passes found with passesUpdatedSince filter, but passesUpdatedSince was provided,
-    // it might be because the timestamp is too recent. Try returning all passes for this device as a fallback.
-    // This ensures iOS always gets the updated pass even if there's a timing issue.
-    if (serialNumbers.length === 0 && passesUpdatedSince) {
-      console.log('[GET /v1/devices/.../registrations] No passes found with filter, trying without filter as fallback');
-      
-      // Try query without passesUpdatedSince filter
-      const fallbackQuery = supabaseAdmin
-        .from('registrations')
-        .select('pass_id, passes!inner(serial_number, last_updated_at, apple_account_id)')
-        .eq('device_id', device.id)
-        .eq('passes.apple_account_id', account.id);
-      
-      const { data: fallbackRegistrations } = await fallbackQuery;
-      const fallbackSerialNumbers = fallbackRegistrations
-        ?.map((reg: any) => reg.passes?.serial_number)
-        .filter((sn: string) => sn) || [];
-      
-      if (fallbackSerialNumbers.length > 0) {
-        console.log('[GET /v1/devices/.../registrations] Fallback query found passes:', fallbackSerialNumbers);
-        await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            event: '[GET /v1/devices/.../registrations] Fallback query returned passes',
-            data: { deviceID, passTypeID, passesUpdatedSince, fallbackSerialNumbers },
-            level: 'info',
-          }),
-        }).catch(() => {});
-        return NextResponse.json(fallbackSerialNumbers, { status: 200 });
-      }
-    }
-
-    if (serialNumbers.length === 0) {
-      // Return empty array, not 204 - per Apple docs, should return [] not 204
-      console.log('[GET /v1/devices/.../registrations] Returning empty array - no passes found');
-      await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event: '[GET /v1/devices/.../registrations] Returning empty array',
-          data: { deviceID, passTypeID, passesUpdatedSince, registrationsCount: registrations?.length || 0 },
-          level: 'warn',
-        }),
-      }).catch(() => {});
-      return NextResponse.json([], { status: 200 });
-    }
-
-    // Return serial numbers as JSON array - per Apple docs format
-    // CRITICAL: iOS should then call GET /v1/passes/{passTypeID}/{serialNumber} for each serial number
-    // If iOS doesn't call GET /v1/passes, it means iOS thinks it already has the latest version
-    console.log('[GET /v1/devices/.../registrations] Returning serial numbers:', serialNumbers);
-    console.log('[GET /v1/devices/.../registrations] iOS should now call GET /v1/passes for each serial number');
-    console.log('[GET /v1/devices/.../registrations] Expected calls:', serialNumbers.map((sn: string) => `GET /v1/passes/${passTypeID}/${sn}`));
+    // CRITICAL FIX: Return the correct format per Apple documentation
+    // The response should be a JSON object with serialNumbers array and lastUpdated timestamp
+    // This is the critical response. If serialNumbers is not empty, iOS will proceed to fetch the passes.
+    console.log('[GET /v1/devices/.../registrations] Returning response:', {
+      serialNumbersCount: serialNumbers.length,
+      serialNumbers,
+      passesUpdatedSince: passesUpdatedSince || 'none',
+    });
     
     await fetch(`${request.nextUrl.origin}/api/debug/log-event`, {
       method: 'POST',
@@ -754,7 +672,7 @@ async function handleGetUpdatedPasses(
           count: serialNumbers.length,
           expectedCalls: serialNumbers.map((sn: string) => `GET /v1/passes/${passTypeID}/${sn}`),
         },
-        level: 'info',
+        level: serialNumbers.length > 0 ? 'info' : 'warn',
       }),
     }).catch(() => {});
     
@@ -762,7 +680,11 @@ async function handleGetUpdatedPasses(
     fetch('http://127.0.0.1:7242/ingest/f2e4e82b-ebdd-4413-8acd-05ca1ad240c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app/api/apple/v1/[...path]/route.ts:670',message:'Returning serial numbers to iOS',data:{serialNumbers,passTypeID,expectedCalls:serialNumbers.map((sn:string)=>`GET /v1/passes/${passTypeID}/${sn}`)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
     
-    return NextResponse.json(serialNumbers, { status: 200 });
+    // CRITICAL: Return JSON object with serialNumbers array and lastUpdated timestamp
+    return NextResponse.json({
+      serialNumbers: serialNumbers,
+      lastUpdated: new Date().toISOString(),
+    }, { status: 200 });
   } catch (error) {
     console.error('Error in handleGetUpdatedPasses:', error);
     return new NextResponse('Internal Server Error', { status: 500 });

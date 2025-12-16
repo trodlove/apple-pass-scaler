@@ -43,7 +43,8 @@ CREATE TABLE passes (
     pass_data JSONB, -- User-specific values, including all tracking params
     revenue NUMERIC(10, 2) DEFAULT 0.00,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    last_updated_at TIMESTAMPTZ DEFAULT NOW()
+    last_updated_at TIMESTAMPTZ DEFAULT NOW(),
+    last_modified TIMESTAMPTZ DEFAULT NOW() -- CRITICAL: Used by iOS to determine which passes need updating
 );
 
 -- Table for devices that have a pass installed

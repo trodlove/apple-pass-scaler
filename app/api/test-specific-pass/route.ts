@@ -82,15 +82,18 @@ export async function POST(request: NextRequest) {
       notificationSentAt: new Date().toISOString(),
     };
 
+    // CRITICAL FIX: Update both last_updated_at AND last_modified
+    // last_modified is used by iOS to determine which passes need updating
     const updateTimestamp = new Date().toISOString();
     const { error: updateError, data: updatedPass } = await supabaseAdmin
       .from('passes')
       .update({
         pass_data: updatedPassData,
         last_updated_at: updateTimestamp,
+        last_modified: updateTimestamp, // CRITICAL: This is what iOS uses to detect updates
       })
       .eq('id', pass.id)
-      .select('last_updated_at')
+      .select('last_updated_at, last_modified')
       .single();
     
     // #region agent log

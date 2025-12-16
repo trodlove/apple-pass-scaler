@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
       .update({
         pass_data: updatedPassData,
         last_updated_at: new Date().toISOString(),
+        last_modified: new Date().toISOString(), // CRITICAL: iOS uses this to detect updates
       })
       .eq('id', pass.id);
 
