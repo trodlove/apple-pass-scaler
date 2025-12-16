@@ -25,39 +25,40 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
   
   // Get image URLs (prefer @2x, fallback to @1x, then old format)
   const iconUrl = passData?.icon_2x_url || passData?.icon_1x_url || passData?.icon || '';
+  const stripUrl = passData?.strip_2x_url || passData?.strip_1x_url || passData?.stripImage || '';
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[340px]">
       {/* Pass Preview - matches iOS Wallet exactly */}
       <div
-        className="relative rounded-t-lg overflow-hidden"
+        className="relative rounded-t-xl overflow-hidden"
         style={{
           backgroundColor,
           color: foregroundColor,
-          aspectRatio: '0.65',
+          height: '380px',
         }}
       >
         {/* === TOP HEADER ROW === */}
-        <div className="flex items-start justify-between px-3 pt-3">
+        <div className="flex items-start justify-between px-4 pt-4">
           {/* Left: Icon + Logo Text */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             {iconUrl && !imageError ? (
               <img
                 src={iconUrl}
                 alt="Icon"
-                className="w-8 h-8 rounded-md object-cover"
+                className="w-10 h-10 rounded-lg object-cover"
                 onError={() => setImageError(true)}
               />
             ) : (
               <div 
-                className="w-8 h-8 rounded-md flex items-center justify-center"
-                style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
+                className="w-10 h-10 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}
               >
-                <div className="w-4 h-5 bg-black/60 rounded-sm" />
+                <div className="w-5 h-6 bg-black/50 rounded-sm" />
               </div>
             )}
             <span 
-              className="text-sm font-medium"
+              className="text-base font-medium"
               style={{ color: foregroundColor }}
             >
               {passData?.logoText || 'Logo'}
@@ -67,13 +68,13 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
           {/* Right: Header Field */}
           <div className="text-right">
             <div 
-              className="text-[8px] uppercase tracking-wide"
+              className="text-[10px] uppercase tracking-wide font-medium"
               style={{ color: labelColor }}
             >
               {passData?.headerLabel || 'HEADER'}
             </div>
             <div 
-              className="text-sm font-semibold -mt-0.5"
+              className="text-xl font-semibold leading-tight"
               style={{ color: foregroundColor }}
             >
               {passData?.headerValue || 'value'}
@@ -82,32 +83,43 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
         </div>
 
         {/* === PRIMARY FIELD === */}
-        <div className="px-3 mt-2">
+        <div className="px-4 mt-4">
           <div 
-            className="text-[8px] uppercase tracking-wide"
+            className="text-[10px] uppercase tracking-wide font-medium"
             style={{ color: labelColor }}
           >
             {passData?.primaryLabel || 'WELCOME'}
           </div>
           <div 
-            className="text-lg font-semibold leading-tight"
+            className="text-2xl font-semibold leading-tight"
             style={{ color: foregroundColor }}
           >
             {passData?.primaryValue || passData?.organizationName || 'Apple Pass Scaler'}
           </div>
         </div>
 
+        {/* === STRIP IMAGE (if exists) === */}
+        {stripUrl && (
+          <div className="w-full h-24 mt-3 overflow-hidden">
+            <img
+              src={stripUrl}
+              alt="Strip"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+
         {/* === SECONDARY FIELDS === */}
-        <div className="flex justify-between px-3 mt-3">
+        <div className="flex justify-between px-4 mt-4">
           <div>
             <div 
-              className="text-[8px] uppercase tracking-wide"
+              className="text-[10px] uppercase tracking-wide font-medium"
               style={{ color: labelColor }}
             >
               {passData?.secondaryLeftLabel || 'LEFT'}
             </div>
             <div 
-              className="text-sm font-medium"
+              className="text-base font-medium"
               style={{ color: foregroundColor }}
             >
               {passData?.secondaryLeftValue || 'value'}
@@ -115,13 +127,13 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
           </div>
           <div className="text-right">
             <div 
-              className="text-[8px] uppercase tracking-wide"
+              className="text-[10px] uppercase tracking-wide font-medium"
               style={{ color: labelColor }}
             >
               {passData?.secondaryRightLabel || 'RIGHT'}
             </div>
             <div 
-              className="text-sm font-medium"
+              className="text-base font-medium"
               style={{ color: foregroundColor }}
             >
               {passData?.secondaryRightValue || 'value'}
@@ -130,9 +142,9 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
         </div>
 
         {/* === QR CODE === */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
-          <div className="bg-white rounded-lg p-2 shadow">
-            <div className="w-14 h-14 flex items-center justify-center">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+          <div className="bg-white rounded-xl p-2.5 shadow-lg">
+            <div className="w-20 h-20 flex items-center justify-center">
               <svg viewBox="0 0 100 100" className="w-full h-full">
                 <rect x="0" y="0" width="100" height="100" fill="white"/>
                 <rect x="5" y="5" width="25" height="25" fill="black"/>
@@ -161,7 +173,7 @@ export function PassCard({ pass, onShare, onNotify, onEdit, onDownload, onDelete
         <div className="font-semibold text-gray-900">
           {passData?.organizationName || 'Apple Pass Scaler'}
         </div>
-        <div className="text-sm text-gray-500 truncate">
+        <div className="text-sm text-gray-500 truncate font-mono">
           {pass.serial_number}
         </div>
 

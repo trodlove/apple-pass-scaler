@@ -11,14 +11,15 @@ export function PassPreview() {
   const stripUrl = passData.strip_2x_url || passData.strip_1x_url || '';
 
   return (
-    <div className="w-[290px] mx-auto">
-      {/* Pass Container - matches iOS Wallet pass exactly */}
+    <div className="flex flex-col items-center">
+      {/* Pass Container - iPhone 13 Wallet pass dimensions: 320 x 420 pts scaled down */}
       <div
-        className="rounded-[14px] overflow-hidden relative"
+        className="rounded-[16px] overflow-hidden relative shadow-2xl"
         style={{
+          width: '280px',
+          height: '420px',
           backgroundColor: passData.backgroundColor || '#B5A094',
           color: passData.foregroundColor || '#000000',
-          aspectRatio: '0.63',
         }}
       >
         {/* === TOP HEADER ROW === */}
@@ -29,18 +30,18 @@ export function PassPreview() {
               <img
                 src={iconUrl}
                 alt="Icon"
-                className="w-10 h-10 rounded-lg object-cover"
+                className="w-11 h-11 rounded-lg object-cover"
               />
             ) : (
               <div 
-                className="w-10 h-10 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}
+                className="w-11 h-11 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(0,0,0,0.15)' }}
               >
-                <div className="w-5 h-6 bg-black/60 rounded-sm" />
+                <div className="w-5 h-7 bg-black/50 rounded-sm" />
               </div>
             )}
             <span 
-              className="text-base font-medium"
+              className="text-[17px] font-medium"
               style={{ color: passData.foregroundColor || '#000000' }}
             >
               {passData.logoText || 'Logo Text'}
@@ -50,13 +51,13 @@ export function PassPreview() {
           {/* Right: Header Field */}
           <div className="text-right">
             <div 
-              className="text-[10px] uppercase tracking-wide"
+              className="text-[11px] uppercase tracking-wide font-medium"
               style={{ color: passData.labelColor || '#666666' }}
             >
               {passData.headerLabel || 'HEADER'}
             </div>
             <div 
-              className="text-lg font-semibold -mt-0.5"
+              className="text-[22px] font-semibold leading-tight"
               style={{ color: passData.foregroundColor || '#000000' }}
             >
               {passData.headerValue || 'Value'}
@@ -65,15 +66,15 @@ export function PassPreview() {
         </div>
 
         {/* === PRIMARY FIELD === */}
-        <div className="px-4 mt-4">
+        <div className="px-4 mt-5">
           <div 
-            className="text-[10px] uppercase tracking-wide"
+            className="text-[11px] uppercase tracking-wide font-medium"
             style={{ color: passData.labelColor || '#666666' }}
           >
             {passData.primaryLabel || 'WELCOME'}
           </div>
           <div 
-            className="text-[26px] font-semibold leading-tight"
+            className="text-[32px] font-semibold leading-tight"
             style={{ color: passData.foregroundColor || '#000000' }}
           >
             {passData.primaryValue || passData.organizationName || 'Apple Pass Scaler'}
@@ -82,7 +83,7 @@ export function PassPreview() {
 
         {/* === STRIP IMAGE (if exists) === */}
         {stripUrl && (
-          <div className="w-full h-28 mt-3 overflow-hidden">
+          <div className="w-full h-[110px] mt-4 overflow-hidden">
             <img
               src={stripUrl}
               alt="Strip"
@@ -92,16 +93,16 @@ export function PassPreview() {
         )}
 
         {/* === SECONDARY FIELDS === */}
-        <div className="flex justify-between px-4 mt-4">
+        <div className="flex justify-between px-4 mt-5">
           <div>
             <div 
-              className="text-[10px] uppercase tracking-wide"
+              className="text-[11px] uppercase tracking-wide font-medium"
               style={{ color: passData.labelColor || '#666666' }}
             >
               {passData.secondaryLeftLabel || 'LEFT'}
             </div>
             <div 
-              className="text-base font-medium"
+              className="text-[17px] font-medium"
               style={{ color: passData.foregroundColor || '#000000' }}
             >
               {passData.secondaryLeftValue || 'value'}
@@ -109,13 +110,13 @@ export function PassPreview() {
           </div>
           <div className="text-right">
             <div 
-              className="text-[10px] uppercase tracking-wide"
+              className="text-[11px] uppercase tracking-wide font-medium"
               style={{ color: passData.labelColor || '#666666' }}
             >
               {passData.secondaryRightLabel || 'RIGHT'}
             </div>
             <div 
-              className="text-base font-medium"
+              className="text-[17px] font-medium"
               style={{ color: passData.foregroundColor || '#000000' }}
             >
               {passData.secondaryRightValue || 'value'}
@@ -124,9 +125,9 @@ export function PassPreview() {
         </div>
 
         {/* === QR CODE === */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2">
           <div className="bg-white rounded-xl p-3 shadow-lg">
-            <div className="w-[100px] h-[100px] flex items-center justify-center">
+            <div className="w-[110px] h-[110px] flex items-center justify-center">
               {/* Simulated QR pattern */}
               <svg viewBox="0 0 100 100" className="w-full h-full">
                 <rect x="0" y="0" width="100" height="100" fill="white"/>
@@ -186,7 +187,7 @@ export function PassPreview() {
       </div>
 
       {/* === iOS LOCK SCREEN NOTIFICATION PREVIEW === */}
-      <div className="mt-6">
+      <div className="mt-6 w-full max-w-[280px]">
         <div className="bg-white/95 backdrop-blur rounded-2xl p-4 shadow-lg border border-gray-200">
           <div className="flex items-start gap-3">
             {iconUrl ? (

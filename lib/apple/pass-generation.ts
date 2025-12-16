@@ -186,25 +186,79 @@ export async function generatePassBuffer(
       'pass.json': Buffer.from(JSON.stringify(finalPassJson, null, 2)),
     };
 
-    // Add images if provided
-    if (passData.logo) {
+    // Helper function to fetch image from URL and convert to Buffer
+    async function fetchImageAsBuffer(url: string): Promise<Buffer | null> {
       try {
-        const logoBuffer = base64ToBuffer(passData.logo);
-        buffers['logo.png'] = logoBuffer;
-        buffers['logo@2x.png'] = logoBuffer; // Use same image for 2x
+        if (!url) return null;
+        
+        // If it's a data URL (base64), convert directly
+        if (url.startsWith('data:')) {
+          return base64ToBuffer(url);
+        }
+        
+        // If it's a remote URL, fetch it
+        const response = await fetch(url);
+        if (!response.ok) {
+          console.warn('Failed to fetch image:', url, response.status);
+          return null;
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        return Buffer.from(arrayBuffer);
+      } catch (error) {
+        console.warn('Error fetching image:', url, error);
+        return null;
+      }
+    }
+
+    // Add logo images - check both old and new format
+    const logoUrl = passData.logo_2x_url || passData.logo_1x_url || passData.logo;
+    if (logoUrl) {
+      try {
+        const logoBuffer = await fetchImageAsBuffer(logoUrl);
+        if (logoBuffer) {
+          buffers['logo.png'] = logoBuffer;
+          buffers['logo@2x.png'] = logoBuffer;
+          
+          // If we have specific @2x and @3x URLs, use them
+          if (passData.logo_2x_url) {
+            const logo2xBuffer = await fetchImageAsBuffer(passData.logo_2x_url);
+            if (logo2xBuffer) buffers['logo@2x.png'] = logo2xBuffer;
+          }
+          if (passData.logo_3x_url) {
+            const logo3xBuffer = await fetchImageAsBuffer(passData.logo_3x_url);
+            if (logo3xBuffer) buffers['logo@3x.png'] = logo3xBuffer;
+          }
+        }
       } catch (error) {
         console.warn('Error processing logo image:', error);
       }
     }
 
-    if (passData.icon) {
+    // Add icon images - check both old and new format
+    const iconUrl = passData.icon_2x_url || passData.icon_1x_url || passData.icon;
+    if (iconUrl) {
       try {
-        const iconBuffer = base64ToBuffer(passData.icon);
-        buffers['icon.png'] = iconBuffer;
-        buffers['icon@2x.png'] = iconBuffer;
+        const iconBuffer = await fetchImageAsBuffer(iconUrl);
+        if (iconBuffer) {
+          buffers['icon.png'] = iconBuffer;
+          buffers['icon@2x.png'] = iconBuffer;
+          
+          // If we have specific @2x and @3x URLs, use them
+          if (passData.icon_2x_url) {
+            const icon2xBuffer = await fetchImageAsBuffer(passData.icon_2x_url);
+            if (icon2xBuffer) buffers['icon@2x.png'] = icon2xBuffer;
+          }
+          if (passData.icon_3x_url) {
+            const icon3xBuffer = await fetchImageAsBuffer(passData.icon_3x_url);
+            if (icon3xBuffer) buffers['icon@3x.png'] = icon3xBuffer;
+          }
+        } else {
+          // Fallback to minimal icon
+          buffers['icon.png'] = minimalIcon;
+          buffers['icon@2x.png'] = minimalIcon;
+        }
       } catch (error) {
         console.warn('Error processing icon image:', error);
-        // Fallback to minimal icon
         buffers['icon.png'] = minimalIcon;
         buffers['icon@2x.png'] = minimalIcon;
       }
@@ -214,11 +268,25 @@ export async function generatePassBuffer(
       buffers['icon@2x.png'] = minimalIcon;
     }
 
-    if (passData.stripImage) {
+    // Add strip images - check both old and new format
+    const stripUrl = passData.strip_2x_url || passData.strip_1x_url || passData.stripImage;
+    if (stripUrl) {
       try {
-        const stripBuffer = base64ToBuffer(passData.stripImage);
-        buffers['strip.png'] = stripBuffer;
-        buffers['strip@2x.png'] = stripBuffer;
+        const stripBuffer = await fetchImageAsBuffer(stripUrl);
+        if (stripBuffer) {
+          buffers['strip.png'] = stripBuffer;
+          buffers['strip@2x.png'] = stripBuffer;
+          
+          // If we have specific @2x and @3x URLs, use them
+          if (passData.strip_2x_url) {
+            const strip2xBuffer = await fetchImageAsBuffer(passData.strip_2x_url);
+            if (strip2xBuffer) buffers['strip@2x.png'] = strip2xBuffer;
+          }
+          if (passData.strip_3x_url) {
+            const strip3xBuffer = await fetchImageAsBuffer(passData.strip_3x_url);
+            if (strip3xBuffer) buffers['strip@3x.png'] = strip3xBuffer;
+          }
+        }
       } catch (error) {
         console.warn('Error processing strip image:', error);
       }
