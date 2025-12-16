@@ -44,7 +44,7 @@ export default function DashboardLayout({
             <div className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center">
               <Lock className="w-5 h-5 text-white" />
             </div>
-            <span className="text-lg font-semibold text-gray-900">Lockscreen</span>
+            <span className="text-lg font-semibold text-gray-900">Apple Pass Ferda Scaler</span>
             <ArrowLeft className="w-4 h-4 text-gray-500 ml-auto" />
           </Link>
         </div>

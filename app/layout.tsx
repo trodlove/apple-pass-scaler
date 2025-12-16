@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Apple Pass Scaler",
+  title: "Apple Pass Ferda Scaler",
   description: "SaaS platform for Apple Wallet pass management",
 };
 
