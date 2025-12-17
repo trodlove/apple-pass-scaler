@@ -219,11 +219,18 @@ export async function updatePassObject(passObjectId: string, updates: PassUpdate
     ];
     
     // Add message for notification (Google Wallet specific)
+    // messageType: 'TEXT_AND_NOTIFY' is REQUIRED to trigger push notifications
     updatePayload.messages = [
       {
         id: `msg_${Date.now()}`,
+        messageType: 'TEXT_AND_NOTIFY',
         header: updates.title || 'New Update!',
         body: updates.body || 'Check your pass for details',
+        displayInterval: {
+          start: {
+            date: new Date().toISOString(),
+          },
+        },
       },
     ];
   }
