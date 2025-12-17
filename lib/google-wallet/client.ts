@@ -39,24 +39,19 @@ export async function createPassClass(config: ClassConfig) {
   const issuerId = getIssuerId();
   const classId = `${issuerId}.${config.classId}`;
 
-  const genericClass = {
+  const genericClass: any = {
     id: classId,
     issuerName: config.issuerName,
     reviewStatus: 'UNDER_REVIEW',
-    // Card template configuration
+    // Required header fields
     classTemplateInfo: {
       cardTemplateOverride: {
         cardRowTemplateInfos: [
           {
-            twoItems: {
-              startItem: {
+            oneItem: {
+              item: {
                 firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['title']" }],
-                },
-              },
-              endItem: {
-                firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['subtitle']" }],
+                  fields: [{ fieldPath: "object.textModulesData['details']" }],
                 },
               },
             },
@@ -117,18 +112,27 @@ export async function createPassObject(config: PassConfig) {
     id: objectId,
     classId: classId,
     state: 'ACTIVE',
-    // Text content
+    // Required: Card title that appears at the top of the pass
+    cardTitle: {
+      defaultValue: {
+        language: 'en',
+        value: config.title || 'Exclusive Offer',
+      },
+    },
+    // Required: Header shown on the pass
+    header: {
+      defaultValue: {
+        language: 'en',
+        value: config.subtitle || 'Tap below to claim',
+      },
+    },
+    // Text content for details
     textModulesData: [
       {
-        id: 'title',
-        header: 'Welcome',
+        id: 'details',
+        header: 'Details',
         body: config.title || 'Your exclusive offer awaits!',
       },
-      ...(config.subtitle ? [{
-        id: 'subtitle',
-        header: 'Details',
-        body: config.subtitle,
-      }] : []),
     ],
     // Hero image
     ...(config.heroImageUrl && {
@@ -263,17 +267,27 @@ export async function createPassWithSaveUrl(config: PassConfig) {
     id: objectId,
     classId: classId,
     state: 'ACTIVE',
+    // Required: Card title that appears at the top of the pass
+    cardTitle: {
+      defaultValue: {
+        language: 'en',
+        value: config.title || 'Exclusive Offer',
+      },
+    },
+    // Required: Header shown on the pass
+    header: {
+      defaultValue: {
+        language: 'en',
+        value: config.subtitle || 'Tap below to claim',
+      },
+    },
+    // Text content for details
     textModulesData: [
       {
-        id: 'title',
-        header: 'Welcome',
+        id: 'details',
+        header: 'Details',
         body: config.title || 'Your exclusive offer awaits!',
       },
-      ...(config.subtitle ? [{
-        id: 'subtitle',
-        header: 'Details',
-        body: config.subtitle,
-      }] : []),
     ],
     ...(config.heroImageUrl && {
       heroImage: {
