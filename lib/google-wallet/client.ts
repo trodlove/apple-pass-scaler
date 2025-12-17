@@ -148,22 +148,19 @@ export async function createPassObject(config: PassConfig) {
         contentDescription: { defaultValue: { language: 'en', value: 'Logo' } },
       },
     }),
-    // THIS IS THE KEY FEATURE - Clickable affiliate link on front of pass
+    // THIS IS THE KEY FEATURE - Clickable affiliate link button on front of pass
     appLinkData: {
-      androidAppLinkInfo: {
-        appLogoImage: {
-          sourceUri: { 
-            uri: config.logoUrl || 'https://www.gstatic.com/images/branding/product/2x/googleg_48dp.png' 
-          },
-          contentDescription: { defaultValue: { language: 'en', value: 'App Logo' } },
-        },
-        title: { defaultValue: { language: 'en', value: 'Claim Your Reward' } },
-        description: { defaultValue: { language: 'en', value: 'Tap to open your exclusive offer' } },
+      webAppLinkInfo: {
         appTarget: {
           targetUri: {
             uri: config.affiliateLink,
-            description: 'Open affiliate link',
           },
+        },
+      },
+      displayText: {
+        defaultValue: {
+          language: 'en-US',
+          value: 'CLAIM YOUR REWARD',
         },
       },
     },
@@ -301,22 +298,19 @@ export async function createPassWithSaveUrl(config: PassConfig) {
         contentDescription: { defaultValue: { language: 'en', value: 'Logo' } },
       },
     }),
-    // Affiliate link on front of pass
+    // Affiliate link button on front of pass
     appLinkData: {
-      androidAppLinkInfo: {
-        appLogoImage: {
-          sourceUri: { 
-            uri: config.logoUrl || 'https://www.gstatic.com/images/branding/product/2x/googleg_48dp.png' 
-          },
-          contentDescription: { defaultValue: { language: 'en', value: 'App Logo' } },
-        },
-        title: { defaultValue: { language: 'en', value: 'Claim Your Reward' } },
-        description: { defaultValue: { language: 'en', value: 'Tap to open your exclusive offer' } },
+      webAppLinkInfo: {
         appTarget: {
           targetUri: {
             uri: config.affiliateLink,
-            description: 'Open affiliate link',
           },
+        },
+      },
+      displayText: {
+        defaultValue: {
+          language: 'en-US',
+          value: 'CLAIM YOUR REWARD',
         },
       },
     },
