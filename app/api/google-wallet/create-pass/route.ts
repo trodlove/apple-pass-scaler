@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPassWithSaveUrl } from '@/lib/google-wallet/client';
+import { createPassWithSaveUrl, createPassClass } from '@/lib/google-wallet/client';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import type { CreatePassRequest } from '@/lib/google-wallet/types';
 
@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic';
  * POST /api/google-wallet/create-pass
  * Create a new Google Wallet pass with appLinkData affiliate link
  * Returns a "Save to Google Wallet" URL
+ * Auto-creates the class if it doesn't exist
  */
 export async function POST(request: NextRequest) {
   try {
@@ -27,6 +28,18 @@ export async function POST(request: NextRequest) {
         { error: 'affiliateLink is required' },
         { status: 400 }
       );
+    }
+
+    // Auto-create the class if it doesn't exist
+    try {
+      await createPassClass({
+        classId: body.classId,
+        issuerName: body.title || 'Affiliate Rewards',
+        title: body.title || 'Exclusive Offer',
+      });
+    } catch (classError: any) {
+      // Class might already exist, that's fine
+      console.log('Class creation result:', classError.message || 'created or exists');
     }
 
     // Generate a unique object ID
