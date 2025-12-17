@@ -200,13 +200,30 @@ export async function updatePassObject(passObjectId: string, updates: PassUpdate
 
   const updatePayload: any = {};
 
-  // Update text content
+  // Update the header (visible on pass front) to trigger notification
   if (updates.title || updates.body) {
+    updatePayload.header = {
+      defaultValue: {
+        language: 'en-US',
+        value: updates.body || updates.title || 'New Update!',
+      },
+    };
+    
+    // Also update text modules
     updatePayload.textModulesData = [
       {
         id: 'notification',
         header: updates.title || 'New Update!',
         body: updates.body || '',
+      },
+    ];
+    
+    // Add message for notification (Google Wallet specific)
+    updatePayload.messages = [
+      {
+        id: `msg_${Date.now()}`,
+        header: updates.title || 'New Update!',
+        body: updates.body || 'Check your pass for details',
       },
     ];
   }
